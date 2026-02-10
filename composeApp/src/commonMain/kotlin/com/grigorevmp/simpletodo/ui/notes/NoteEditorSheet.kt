@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.clickable
+import androidx.compose.animation.Crossfade
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExposedDropdownMenuDefaults
@@ -25,9 +26,13 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -59,12 +64,17 @@ fun NoteEditorScreen(
     var title by remember { mutableStateOf(initial?.title ?: "") }
     var content by remember { mutableStateOf(TextFieldValue(initial?.content ?: "")) }
     var taskId by remember { mutableStateOf(initial?.taskId) }
+    var preview by remember { mutableStateOf(false) }
+
+    val linkedTaskTitle = remember(taskId, tasks) {
+        tasks.firstOrNull { it.id == taskId }?.title
+    }
 
     val scope = rememberCoroutineScope()
     val scrollState = rememberScrollState()
 
     Surface(
-        modifier = Modifier.fillMaxSize().imePadding(),
+        modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background
     ) {
         Column(Modifier.fillMaxSize()) {
@@ -79,8 +89,16 @@ fun NoteEditorScreen(
                     if (initial == null) "New note" else "Edit note",
                     style = MaterialTheme.typography.titleLarge
                 )
-                IconButton(onClick = onDismiss) {
-                    Icon(CloseIcon, contentDescription = "Close")
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = { preview = !preview }) {
+                        Icon(
+                            if (preview) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+                            contentDescription = if (preview) "Edit mode" else "Preview mode"
+                        )
+                    }
+                    IconButton(onClick = onDismiss) {
+                        Icon(CloseIcon, contentDescription = "Close")
+                    }
                 }
             }
 
@@ -95,46 +113,75 @@ fun NoteEditorScreen(
                         .padding(horizontal = 18.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    OutlinedTextField(
-                        value = title,
-                        onValueChange = { title = it },
-                        label = { Text("Title") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                    Crossfade(targetState = preview, label = "note-preview") { isPreview ->
+                        if (!isPreview) {
+                            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                OutlinedTextField(
+                                    value = title,
+                                    onValueChange = { title = it },
+                                    label = { Text("Title") },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
 
-                    TaskLinkPicker(
-                        tasks = tasks,
-                        currentId = taskId,
-                        onPick = { taskId = it }
-                    )
+                                TaskLinkPicker(
+                                    tasks = tasks,
+                                    currentId = taskId,
+                                    onPick = { taskId = it }
+                                )
 
-                    OutlinedTextField(
-                        value = content,
-                        onValueChange = { content = it },
-                        label = { Text("Markdown") },
-                        modifier = Modifier.fillMaxWidth(),
-                        minLines = 10
-                    )
+                                OutlinedTextField(
+                                    value = content,
+                                    onValueChange = { content = it },
+                                    label = { Text("Markdown") },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    minLines = 10
+                                )
+                            }
+                        } else {
+                            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                Text(
+                                    title.ifBlank { "Untitled note" },
+                                    style = MaterialTheme.typography.titleLarge
+                                )
+                                Text(
+                                    "Linked task: ${linkedTaskTitle ?: "No task"}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                if (content.text.isBlank()) {
+                                    Text(
+                                        "No content",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                } else {
+                                    MarkdownText(content.text)
+                                }
+                            }
+                        }
+                    }
 
                     Spacer(Modifier.height(8.dp))
                 }
             }
 
-            MarkdownToolbar(
-                onWrapBold = { content = wrapSelection(content, "**", "**") },
-                onWrapItalic = { content = wrapSelection(content, "*", "*") },
-                onWrapCode = { content = wrapSelection(content, "`", "`") },
-                onH1 = { content = prefixLines(content, "# ") },
-                onH2 = { content = prefixLines(content, "## ") },
-                onBullet = { content = prefixLines(content, "- ") },
-                onQuote = { content = prefixLines(content, "> ") }
-            )
+            if (!preview) {
+                MarkdownToolbar(
+                    onWrapBold = { content = wrapSelection(content, "**", "**") },
+                    onWrapItalic = { content = wrapSelection(content, "*", "*") },
+                    onWrapCode = { content = wrapSelection(content, "`", "`") },
+                    onH1 = { content = prefixLines(content, "# ") },
+                    onH2 = { content = prefixLines(content, "## ") },
+                    onBullet = { content = prefixLines(content, "- ") },
+                    onQuote = { content = prefixLines(content, "> ") }
+                )
+            }
 
             Column(
                 Modifier
                     .fillMaxWidth()
                     .padding(18.dp)
-                    .padding(bottom = 96.dp)
+                    .padding(bottom = 80.dp)
             ) {
                 Button(
                     onClick = {
@@ -187,11 +234,20 @@ private fun TaskLinkPicker(
         value = current,
         onValueChange = {},
         readOnly = true,
+        enabled = false,
         label = { Text("Linked task") },
         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = showDialog) },
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { showDialog = true }
+            .clickable { showDialog = true },
+        colors = OutlinedTextFieldDefaults.colors(
+            disabledTextColor = MaterialTheme.colorScheme.onSurface,
+            disabledBorderColor = MaterialTheme.colorScheme.outline,
+            disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            disabledTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            disabledPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            disabledContainerColor = MaterialTheme.colorScheme.surface
+        )
     )
 
     if (showDialog) {

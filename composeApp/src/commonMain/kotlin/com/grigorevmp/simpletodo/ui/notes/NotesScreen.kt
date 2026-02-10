@@ -37,6 +37,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
@@ -58,7 +59,9 @@ import kotlinx.coroutines.launch
 fun NotesScreen(
     repo: TodoRepository,
     createNoteSignal: Int,
-    onCreateNoteHandled: () -> Unit
+    onCreateNoteHandled: () -> Unit,
+    openNoteId: String?,
+    onOpenNoteHandled: () -> Unit
 ) {
     val tasks by repo.tasks.collectAsState()
     val notes by repo.notes.collectAsState()
@@ -96,6 +99,17 @@ fun NotesScreen(
             showEditor = true
             onCreateNoteHandled()
         }
+    }
+
+    LaunchedEffect(openNoteId, notes) {
+        val targetId = openNoteId ?: return@LaunchedEffect
+        val note = notes.firstOrNull { it.id == targetId }
+        if (note != null) {
+            currentFolderId = note.folderId
+            editNote = note
+            showEditor = true
+        }
+        onOpenNoteHandled()
     }
 
     Column(Modifier.fillMaxSize()) {
@@ -419,7 +433,7 @@ private fun NotesActionBar(
                 Surface(
                     onClick = onNewFolder,
                     shape = MaterialTheme.shapes.large,
-                    color = MaterialTheme.colorScheme.primary
+                    color = Color.Transparent
                 ) {
                     Box(
                         Modifier
@@ -429,7 +443,7 @@ private fun NotesActionBar(
                         Text(
                             "New Folder",
                             style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.onPrimary
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 }
@@ -479,7 +493,7 @@ private fun BackActionButton(
                 Surface(
                     onClick = onBack,
                     shape = MaterialTheme.shapes.large,
-                    color = MaterialTheme.colorScheme.primary
+                    color = Color.Transparent
                 ) {
                     Box(
                         Modifier
@@ -489,7 +503,7 @@ private fun BackActionButton(
                         Text(
                             "Back",
                             style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.onPrimary
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 }

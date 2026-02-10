@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -26,6 +27,7 @@ import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
@@ -72,7 +74,7 @@ import com.grigorevmp.simpletodo.ui.components.AtomSimpleIcon
 import com.grigorevmp.simpletodo.ui.components.FilterIcon
 import com.grigorevmp.simpletodo.ui.components.TagIcon
 import com.grigorevmp.simpletodo.ui.home.components.SegmentedTabs
-import com.grigorevmp.simpletodo.ui.notes.NoteEditorScreen
+import com.grigorevmp.simpletodo.ui.notes.MarkdownText
 import com.grigorevmp.simpletodo.util.dateKey
 import com.grigorevmp.simpletodo.util.formatDeadline
 import com.kyant.backdrop.backdrops.layerBackdrop
@@ -90,7 +92,8 @@ private enum class HomeTab { TIMELINE, INBOX }
 fun HomeScreen(
     repo: TodoRepository,
     createSignal: Int,
-    onCreateHandled: () -> Unit
+    onCreateHandled: () -> Unit,
+    onEditNote: (String) -> Unit
 ) {
     val tasks by repo.tasks.collectAsState()
     val notes by repo.notes.collectAsState()
@@ -101,8 +104,7 @@ fun HomeScreen(
 
     var showEditor by remember { mutableStateOf(false) }
     var editTask by remember { mutableStateOf<TodoTask?>(null) }
-    var showNoteEditor by remember { mutableStateOf(false) }
-    var editNote by remember { mutableStateOf<Note?>(null) }
+    var previewNote by remember { mutableStateOf<Note?>(null) }
     var showSort by remember { mutableStateOf(false) }
     var tagFilter by remember { mutableStateOf<String?>(null) }
     var tab by remember { mutableStateOf(HomeTab.TIMELINE) }
@@ -188,11 +190,7 @@ fun HomeScreen(
                                     noteTitle = { noteId -> notes.firstOrNull { it.id == noteId }?.title },
                                     onOpenNote = { noteId ->
                                         val note = notes.firstOrNull { it.id == noteId }
-                                        if (note != null) {
-                                            editNote = note
-                                            showEditor = false
-                                            showNoteEditor = true
-                                        }
+                                        if (note != null) previewNote = note
                                     }
                                 )
                             }
@@ -224,11 +222,7 @@ fun HomeScreen(
                                     noteTitle = { noteId -> notes.firstOrNull { it.id == noteId }?.title },
                                     onOpenNote = { noteId ->
                                         val note = notes.firstOrNull { it.id == noteId }
-                                        if (note != null) {
-                                            editNote = note
-                                            showEditor = false
-                                            showNoteEditor = true
-                                        }
+                                        if (note != null) previewNote = note
                                     }
                                 )
                             }
@@ -259,22 +253,20 @@ fun HomeScreen(
             )
         }
 
-        if (showNoteEditor) {
-            NoteEditorScreen(
-                repo = repo,
-                initial = editNote,
-                tasks = tasks,
-                folderId = editNote?.folderId,
-                onDismiss = { showNoteEditor = false }
-            )
-        }
-
         detailsTask?.let { t ->
             TaskDetailsDialog(
                 task = t,
                 tagName = { tagId -> prefs.tags.firstOrNull { it.id == tagId }?.name },
                 noteTitle = { noteId -> notes.firstOrNull { it.id == noteId }?.title },
                 onClose = { detailsTask = null }
+            )
+        }
+
+        previewNote?.let { note ->
+            NotePreviewDialog(
+                note = note,
+                onEdit = { onEditNote(note.id); previewNote = null },
+                onClose = { previewNote = null }
             )
         }
 
@@ -327,7 +319,7 @@ private fun TopBar(
                 )
 
                 Text(
-                    "beta 0.2",
+                    "beta 0.3",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontStyle = FontStyle.Italic,
@@ -424,6 +416,44 @@ private fun TaskDetailsDialog(
             }
         },
         confirmButton = {
+            TextButton(onClick = onClose) { Text("Close") }
+        }
+    )
+}
+
+@Composable
+private fun NotePreviewDialog(
+    note: Note,
+    onEdit: () -> Unit,
+    onClose: () -> Unit
+) {
+    val scrollState = rememberScrollState()
+    AlertDialog(
+        onDismissRequest = onClose,
+        title = { Text(note.title, style = MaterialTheme.typography.titleLarge) },
+        text = {
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 360.dp)
+                    .verticalScroll(scrollState),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                if (note.content.isBlank()) {
+                    Text(
+                        "No content",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else {
+                    MarkdownText(note.content)
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onEdit) { Text("Edit") }
+        },
+        dismissButton = {
             TextButton(onClick = onClose) { Text("Close") }
         }
     )

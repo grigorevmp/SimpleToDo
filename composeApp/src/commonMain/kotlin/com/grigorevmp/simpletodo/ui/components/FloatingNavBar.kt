@@ -104,7 +104,7 @@ fun FloatingNavBar(
             Row(
                 Modifier
                     .wrapContentWidth()
-                    .padding(horizontal = 6.dp, vertical = 6.dp)
+                    .padding(horizontal = 8.dp, vertical = 6.dp)
                     .animateContentSize(animationSpec = spring(dampingRatio = 0.85f, stiffness = 520f)),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                 verticalAlignment = Alignment.CenterVertically

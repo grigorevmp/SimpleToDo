@@ -28,6 +28,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -109,125 +110,131 @@ fun TaskEditorSheet(
                         Modifier.fillMaxWidth().weight(1f).verticalScroll(scrollState)
                             .padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text(
-                            if (initial == null) "New task" else "Edit task",
-                            style = MaterialTheme.typography.titleLarge,
-                            modifier = Modifier.align(Alignment.CenterVertically),
-                            textAlign = TextAlign.Center
-                        )
-                        IconButton(
-                            onClick = onDismiss,
-                            modifier = Modifier.align(Alignment.CenterVertically)
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Icon(CloseIcon, contentDescription = "Close")
-                        }
-                    }
-
-                    OutlinedTextField(
-                        value = title,
-                        onValueChange = { title = it },
-                        label = { Text("Task title") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    OutlinedTextField(
-                        value = plan,
-                        onValueChange = { plan = it },
-                        label = { Text("Plan / notes") },
-                        modifier = Modifier.fillMaxWidth(),
-                        minLines = 3
-                    )
-
-                    TextButton(onClick = { showAdvanced = !showAdvanced }) {
-                        Text(if (showAdvanced) "Hide details" else "Show details")
-                    }
-
-                    androidx.compose.animation.AnimatedVisibility(
-                        visible = showAdvanced,
-                        enter = slideInVertically { -it / 2 } + fadeIn(),
-                        exit = slideOutVertically { -it / 2 } + fadeOut()
-                    ) {
-                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            HorizontalDivider()
-
-                            Text("Planned time", style = MaterialTheme.typography.titleMedium)
-                            PlatformDateTimePicker(
-                                current = plannedAt, onPicked = { plannedAt = it })
-
-                            OutlinedTextField(
-                                value = estimateHoursText,
-                                onValueChange = { estimateHoursText = it },
-                                label = { Text("Estimate (hours)") },
-                                modifier = Modifier.fillMaxWidth()
+                            Text(
+                                if (initial == null) "New task" else "Edit task",
+                                style = MaterialTheme.typography.titleLarge,
+                                modifier = Modifier.align(Alignment.CenterVertically),
+                                textAlign = TextAlign.Center
                             )
+                            IconButton(
+                                onClick = onDismiss,
+                                modifier = Modifier.align(Alignment.CenterVertically)
+                            ) {
+                                Icon(CloseIcon, contentDescription = "Close")
+                            }
+                        }
 
-                            Text("Deadline", style = MaterialTheme.typography.titleMedium)
-                            PlatformDateTimePicker(
-                                current = deadline, onPicked = { deadline = it })
+                        OutlinedTextField(
+                            value = title,
+                            onValueChange = { title = it },
+                            label = { Text("Task title") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
 
-                            Text("Priority", style = MaterialTheme.typography.titleMedium)
-                            ImportancePicker(current = importance, onPick = { importance = it })
+                        OutlinedTextField(
+                            value = plan,
+                            onValueChange = { plan = it },
+                            label = { Text("Plan / notes") },
+                            modifier = Modifier.fillMaxWidth(),
+                            minLines = 3
+                        )
 
-                            Text("Tag", style = MaterialTheme.typography.titleMedium)
-                            TagPicker(
-                                tags = prefsTagList, currentId = tagId, onPick = { tagId = it })
+                        TextButton(onClick = { showAdvanced = !showAdvanced }) {
+                            Text(if (showAdvanced) "Hide details" else "Show details")
+                        }
 
-                            Text("Linked note", style = MaterialTheme.typography.titleMedium)
-                            NotePicker(
-                                notes = notes, currentId = noteId, onPick = { noteId = it })
+                        androidx.compose.animation.AnimatedVisibility(
+                            visible = showAdvanced,
+                            enter = slideInVertically { -it / 2 } + fadeIn(),
+                            exit = slideOutVertically { -it / 2 } + fadeOut()
+                        ) {
+                            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                HorizontalDivider()
 
-                            Text("Subtasks", style = MaterialTheme.typography.titleMedium)
-                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                subtasks.forEachIndexed { idx, s ->
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Checkbox(
-                                            checked = s.done, onCheckedChange = {
-                                                subtasks = subtasks.map {
-                                                    if (it.id == s.id) it.copy(done = !it.done) else it
-                                                }
-                                            })
-                                        Spacer(Modifier.width(8.dp))
-                                        OutlinedTextField(
-                                            value = s.text,
-                                            onValueChange = { text ->
-                                                subtasks = subtasks.map {
-                                                    if (it.id == s.id) it.copy(text = text) else it
-                                                }
-                                            },
-                                            label = { Text("Subtask ${idx + 1}") },
-                                            modifier = Modifier.weight(1f)
-                                        )
-                                        Spacer(Modifier.width(8.dp))
-                                        IconButton(
-                                            onClick = {
-                                                subtasks = subtasks.filterNot { it.id == s.id }
-                                            }, enabled = subtasks.isNotEmpty()
-                                        ) {
-                                            Icon(
-                                                DeleteIcon, contentDescription = "Remove subtask"
+                                Text("Planned time", style = MaterialTheme.typography.titleMedium)
+                                PlatformDateTimePicker(
+                                    current = plannedAt, onPicked = { plannedAt = it })
+
+                                OutlinedTextField(
+                                    value = estimateHoursText,
+                                    onValueChange = { estimateHoursText = it },
+                                    label = { Text("Estimate (hours)") },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+
+                                Text("Deadline", style = MaterialTheme.typography.titleMedium)
+                                PlatformDateTimePicker(
+                                    current = deadline, onPicked = { deadline = it })
+
+                                Text("Priority", style = MaterialTheme.typography.titleMedium)
+                                ImportancePicker(current = importance, onPick = { importance = it })
+
+                                Text("Tag", style = MaterialTheme.typography.titleMedium)
+                                TagPicker(
+                                    tags = prefsTagList, currentId = tagId, onPick = { tagId = it })
+
+                                Text("Linked note", style = MaterialTheme.typography.titleMedium)
+                                NotePicker(
+                                    notes = notes, currentId = noteId, onPick = { noteId = it })
+
+                                Text("Subtasks", style = MaterialTheme.typography.titleMedium)
+                                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    subtasks.forEachIndexed { idx, s ->
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Checkbox(
+                                                checked = s.done, onCheckedChange = {
+                                                    subtasks = subtasks.map {
+                                                        if (it.id == s.id) it.copy(done = !it.done) else it
+                                                    }
+                                                })
+                                            Spacer(Modifier.width(8.dp))
+                                            OutlinedTextField(
+                                                value = s.text,
+                                                onValueChange = { text ->
+                                                    subtasks = subtasks.map {
+                                                        if (it.id == s.id) it.copy(text = text) else it
+                                                    }
+                                                },
+                                                label = { Text("Subtask ${idx + 1}") },
+                                                modifier = Modifier.weight(1f)
                                             )
+                                            Spacer(Modifier.width(8.dp))
+                                            IconButton(
+                                                onClick = {
+                                                    subtasks = subtasks.filterNot { it.id == s.id }
+                                                }, enabled = subtasks.isNotEmpty()
+                                            ) {
+                                                Icon(
+                                                    DeleteIcon,
+                                                    contentDescription = "Remove subtask"
+                                                )
+                                            }
                                         }
                                     }
-                                }
 
-                                OutlinedButton(
-                                    onClick = {
-                                        subtasks = subtasks + Subtask(
-                                            id = newId("sub"), text = "New subtask", done = false
-                                        )
-                                    }, modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Icon(AddIcon, contentDescription = "Add")
-                                    Spacer(Modifier.width(8.dp))
-                                    Text("Add subtask")
+                                    OutlinedButton(
+                                        onClick = {
+                                            subtasks = subtasks + Subtask(
+                                                id = newId("sub"),
+                                                text = "New subtask",
+                                                done = false
+                                            )
+                                        }, modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Icon(AddIcon, contentDescription = "Add")
+                                        Spacer(Modifier.width(8.dp))
+                                        Text("Add subtask")
+                                    }
                                 }
                             }
                         }
-                    }
 
-                    Spacer(Modifier.height(32.dp))
-                }
+                        Spacer(Modifier.height(32.dp))
+                    }
                 }
 
                 Column(Modifier.fillMaxWidth().padding(18.dp)) {
@@ -340,12 +347,20 @@ private fun NotePicker(notes: List<Note>, currentId: String?, onPick: (String?) 
         value = current,
         onValueChange = {},
         readOnly = true,
+        enabled = false,
         label = { Text("Note") },
         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = showDialog) },
         modifier = Modifier
             .fillMaxWidth()
             .clickable { showDialog = true },
-        enabled = true
+        colors = OutlinedTextFieldDefaults.colors(
+            disabledTextColor = MaterialTheme.colorScheme.onSurface,
+            disabledBorderColor = MaterialTheme.colorScheme.outline,
+            disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            disabledTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            disabledPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            disabledContainerColor = MaterialTheme.colorScheme.surface
+        )
     )
 
     if (showDialog) {

@@ -112,18 +112,18 @@ private fun FieldMenu(value: SortField, onValue: (SortField) -> Unit) {
 private fun DirMenu(value: SortDir, onValue: (SortDir) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
     OutlinedButton(onClick = { expanded = true }) {
-        Text(if (value == SortDir.ASC) "ascending" else "descending")
+        Text(if (value == SortDir.ASC) "Asc" else "Desc")
     }
     DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-        DropdownMenuItem(text = { Text("ascending") }, onClick = { onValue(SortDir.ASC); expanded = false })
-        DropdownMenuItem(text = { Text("descending") }, onClick = { onValue(SortDir.DESC); expanded = false })
+        DropdownMenuItem(text = { Text("Asc") }, onClick = { onValue(SortDir.ASC); expanded = false })
+        DropdownMenuItem(text = { Text("Desc") }, onClick = { onValue(SortDir.DESC); expanded = false })
     }
 }
 
 private fun fieldLabel(f: SortField): String = when (f) {
-    SortField.PLANNED_AT -> "planned time"
-    SortField.DEADLINE -> "deadline"
-    SortField.IMPORTANCE -> "priority"
-    SortField.CREATED_AT -> "created"
-    SortField.TITLE -> "title"
+    SortField.PLANNED_AT -> "Planned time"
+    SortField.DEADLINE -> "Deadline"
+    SortField.IMPORTANCE -> "Priority"
+    SortField.CREATED_AT -> "Created"
+    SortField.TITLE -> "Title"
 }

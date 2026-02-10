@@ -52,6 +52,7 @@ fun App() {
         }
         val createTaskSignal = remember { androidx.compose.runtime.mutableIntStateOf(0) }
         val createNoteSignal = remember { androidx.compose.runtime.mutableIntStateOf(0) }
+        val openNoteId = remember { androidx.compose.runtime.mutableStateOf<String?>(null) }
         val backgroundColor = MaterialTheme.colorScheme.background
         val backdrop = rememberLayerBackdrop {
             drawRect(backgroundColor)
@@ -76,14 +77,22 @@ fun App() {
                             HomeScreen(
                                 repo = component.repo,
                                 createSignal = createTaskSignal.intValue,
-                                onCreateHandled = { createTaskSignal.intValue = 0 }
+                                onCreateHandled = { createTaskSignal.intValue = 0 },
+                                onEditNote = { noteId ->
+                                    openNoteId.value = noteId
+                                    if (currentRoute != "notes") {
+                                        navController.navigate("notes") { launchSingleTop = true }
+                                    }
+                                }
                             )
                         }
                         composable("notes") {
                             NotesScreen(
                                 repo = component.repo,
                                 createNoteSignal = createNoteSignal.intValue,
-                                onCreateNoteHandled = { createNoteSignal.intValue = 0 }
+                                onCreateNoteHandled = { createNoteSignal.intValue = 0 },
+                                openNoteId = openNoteId.value,
+                                onOpenNoteHandled = { openNoteId.value = null }
                             )
                         }
                         composable("settings") { SettingsScreen(component.repo) }

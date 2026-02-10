@@ -24,6 +24,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.offset
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Whatshot
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -75,6 +77,12 @@ fun TaskCard(
     val deadlineDays = task.deadline?.let { daysUntil(it) }
     val deadlineSoon = (deadlineDays ?: Int.MAX_VALUE) in 0..4
     val longEstimate = (task.estimateHours ?: 0.0) > 6.0
+    val remainingSubs = task.subtasks.count { !it.done }
+    val subLabel = if (remainingSubs > 0) {
+        "Осталось: $remainingSubs"
+    } else {
+        "Подзадачи"
+    }
 
     Box(Modifier.fillMaxWidth()) {
         ImportanceFlameBackdrop(
@@ -193,11 +201,17 @@ fun TaskCard(
                                 .clip(MaterialTheme.shapes.small)
                                 .clickable { subtasksExpanded = !subtasksExpanded }
                                 .padding(vertical = 8.dp),
-                            horizontalArrangement = Arrangement.Center,
+                            horizontalArrangement = Arrangement.End,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
+                            Icon(
+                                if (subtasksExpanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(Modifier.width(6.dp))
                             Text(
-                                text = if (subtasksExpanded) "Скрыть подзадачи" else "Показать подзадачи",
+                                text = subLabel,
                                 style = MaterialTheme.typography.labelLarge,
                                 color = MaterialTheme.colorScheme.primary
                             )
