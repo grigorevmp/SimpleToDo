@@ -1,0 +1,314 @@
+package com.grigorevmp.simpletodo.ui.notes
+
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.LocalOverscrollConfiguration
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.clickable
+import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.unit.dp
+import com.grigorevmp.simpletodo.data.TodoRepository
+import com.grigorevmp.simpletodo.model.Note
+import com.grigorevmp.simpletodo.model.TodoTask
+import com.grigorevmp.simpletodo.ui.components.CloseIcon
+import kotlinx.coroutines.launch
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+@Composable
+fun NoteEditorScreen(
+    repo: TodoRepository,
+    initial: Note?,
+    tasks: List<TodoTask>,
+    folderId: String?,
+    onDismiss: () -> Unit
+) {
+    var title by remember { mutableStateOf(initial?.title ?: "") }
+    var content by remember { mutableStateOf(TextFieldValue(initial?.content ?: "")) }
+    var taskId by remember { mutableStateOf(initial?.taskId) }
+
+    val scope = rememberCoroutineScope()
+    val scrollState = rememberScrollState()
+
+    Surface(
+        modifier = Modifier.fillMaxSize().imePadding(),
+        color = MaterialTheme.colorScheme.background
+    ) {
+        Column(Modifier.fillMaxSize()) {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 18.dp, vertical = 12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    if (initial == null) "New note" else "Edit note",
+                    style = MaterialTheme.typography.titleLarge
+                )
+                IconButton(onClick = onDismiss) {
+                    Icon(CloseIcon, contentDescription = "Close")
+                }
+            }
+
+            androidx.compose.runtime.CompositionLocalProvider(
+                LocalOverscrollConfiguration provides null
+            ) {
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .verticalScroll(scrollState)
+                        .padding(horizontal = 18.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    OutlinedTextField(
+                        value = title,
+                        onValueChange = { title = it },
+                        label = { Text("Title") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    TaskLinkPicker(
+                        tasks = tasks,
+                        currentId = taskId,
+                        onPick = { taskId = it }
+                    )
+
+                    OutlinedTextField(
+                        value = content,
+                        onValueChange = { content = it },
+                        label = { Text("Markdown") },
+                        modifier = Modifier.fillMaxWidth(),
+                        minLines = 10
+                    )
+
+                    Spacer(Modifier.height(8.dp))
+                }
+            }
+
+            MarkdownToolbar(
+                onWrapBold = { content = wrapSelection(content, "**", "**") },
+                onWrapItalic = { content = wrapSelection(content, "*", "*") },
+                onWrapCode = { content = wrapSelection(content, "`", "`") },
+                onH1 = { content = prefixLines(content, "# ") },
+                onH2 = { content = prefixLines(content, "## ") },
+                onBullet = { content = prefixLines(content, "- ") },
+                onQuote = { content = prefixLines(content, "> ") }
+            )
+
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(18.dp)
+                    .padding(bottom = 96.dp)
+            ) {
+                Button(
+                    onClick = {
+                        val t = title.trim()
+                        if (t.isEmpty()) return@Button
+
+                        scope.launch {
+                            if (initial == null) {
+                                repo.addNote(
+                                    title = t,
+                                    content = content.text,
+                                    taskId = taskId,
+                                    folderId = folderId
+                                )
+                            } else {
+                                repo.updateNote(
+                                    initial.copy(
+                                        title = t,
+                                        content = content.text,
+                                        taskId = taskId
+                                    )
+                                )
+                            }
+                            onDismiss()
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text(if (initial == null) "Create" else "Save") }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TaskLinkPicker(
+    tasks: List<TodoTask>,
+    currentId: String?,
+    onPick: (String?) -> Unit
+) {
+    var showDialog by remember { mutableStateOf(false) }
+    var query by remember { mutableStateOf("") }
+    val focusRequester = remember { FocusRequester() }
+    val current = tasks.firstOrNull { it.id == currentId }?.title ?: "No task"
+    val filtered = remember(tasks, query) {
+        if (query.isBlank()) tasks else tasks.filter { it.title.contains(query, ignoreCase = true) }
+    }
+
+    OutlinedTextField(
+        value = current,
+        onValueChange = {},
+        readOnly = true,
+        label = { Text("Linked task") },
+        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = showDialog) },
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { showDialog = true }
+    )
+
+    if (showDialog) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showDialog = false },
+            title = { Text("Select task") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = query,
+                        onValueChange = { query = it },
+                        placeholder = { Text("Search...") },
+                        modifier = Modifier.fillMaxWidth().focusRequester(focusRequester)
+                    )
+                    androidx.compose.foundation.lazy.LazyColumn(
+                        modifier = Modifier.fillMaxWidth().heightIn(max = 260.dp)
+                    ) {
+                        item {
+                            DropdownMenuItem(
+                                text = { Text("No task") },
+                                onClick = {
+                                    onPick(null)
+                                    showDialog = false
+                                }
+                            )
+                        }
+                        items(filtered.size) { idx ->
+                            val t = filtered[idx]
+                            DropdownMenuItem(
+                                text = { Text(t.title) },
+                                onClick = {
+                                    onPick(t.id)
+                                    showDialog = false
+                                }
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showDialog = false }) { Text("Close") }
+            }
+        )
+        androidx.compose.runtime.LaunchedEffect(showDialog) {
+            if (showDialog) focusRequester.requestFocus()
+        }
+    }
+}
+
+@Composable
+private fun MarkdownToolbar(
+    onWrapBold: () -> Unit,
+    onWrapItalic: () -> Unit,
+    onWrapCode: () -> Unit,
+    onH1: () -> Unit,
+    onH2: () -> Unit,
+    onBullet: () -> Unit,
+    onQuote: () -> Unit
+) {
+    Row(
+        Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 18.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        TextButton(onClick = onWrapBold) { Text("B") }
+        TextButton(onClick = onWrapItalic) { Text("I") }
+        TextButton(onClick = onWrapCode) { Text("`") }
+        TextButton(onClick = onH1) { Text("H1") }
+        TextButton(onClick = onH2) { Text("H2") }
+        TextButton(onClick = onBullet) { Text("-") }
+        TextButton(onClick = onQuote) { Text(">") }
+    }
+}
+
+private fun wrapSelection(
+    value: TextFieldValue,
+    prefix: String,
+    suffix: String
+): TextFieldValue {
+    val sel = value.selection
+    val start = sel.start.coerceIn(0, value.text.length)
+    val end = sel.end.coerceIn(0, value.text.length)
+    val before = value.text.substring(0, start)
+    val selected = value.text.substring(start, end)
+    val after = value.text.substring(end)
+
+    return if (start == end) {
+        val newText = before + prefix + suffix + after
+        val cursor = start + prefix.length
+        value.copy(text = newText, selection = TextRange(cursor, cursor))
+    } else {
+        val newText = before + prefix + selected + suffix + after
+        value.copy(
+            text = newText,
+            selection = TextRange(start + prefix.length, end + prefix.length)
+        )
+    }
+}
+
+private fun prefixLines(value: TextFieldValue, prefix: String): TextFieldValue {
+    val text = value.text
+    val selStart = value.selection.start.coerceIn(0, text.length)
+    val selEnd = value.selection.end.coerceIn(0, text.length)
+    val lineStart = text.lastIndexOf('\n', startIndex = (selStart - 1).coerceAtLeast(0)).let {
+        if (it == -1) 0 else it + 1
+    }
+    val lineEnd = text.indexOf('\n', startIndex = selEnd).let {
+        if (it == -1) text.length else it
+    }
+
+    val segment = text.substring(lineStart, lineEnd)
+    val prefixed = segment.lines().joinToString("\n") { line ->
+        if (line.startsWith(prefix)) line else prefix + line
+    }
+    val newText = text.substring(0, lineStart) + prefixed + text.substring(lineEnd)
+    val added = prefixed.length - segment.length
+    return value.copy(
+        text = newText,
+        selection = TextRange(selStart + added, selEnd + added)
+    )
+}
