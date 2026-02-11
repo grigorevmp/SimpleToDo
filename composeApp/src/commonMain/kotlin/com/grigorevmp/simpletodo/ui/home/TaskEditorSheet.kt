@@ -40,6 +40,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -79,6 +80,7 @@ fun TaskEditorSheet(
     initial: TodoTask?,
     onDismiss: () -> Unit
 ) {
+    val prefs by repo.prefs.collectAsState()
     var title by remember { mutableStateOf(initial?.title ?: "") }
     var plan by remember { mutableStateOf(initial?.plan ?: "") }
     var importance by remember { mutableStateOf(initial?.importance ?: Importance.NORMAL) }
@@ -187,7 +189,11 @@ fun TaskEditorSheet(
 
                                 Text("Linked note", style = MaterialTheme.typography.titleMedium)
                                 NotePicker(
-                                    notes = notes, currentId = noteId, onPick = { noteId = it })
+                                    notes = notes,
+                                    currentId = noteId,
+                                    dimScroll = prefs.dimScroll,
+                                    onPick = { noteId = it }
+                                )
 
                                 Text("Subtasks", style = MaterialTheme.typography.titleMedium)
                                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -246,7 +252,8 @@ fun TaskEditorSheet(
 
                         FadingScrollEdges(
                             scrollState = scrollState,
-                            modifier = Modifier.matchParentSize()
+                            modifier = Modifier.matchParentSize(),
+                            enabled = prefs.dimScroll
                         )
                     }
                 }
@@ -348,7 +355,12 @@ private fun TagPicker(tags: List<Tag>, currentId: String?, onPick: (String?) -> 
 
 @Composable
 @ExperimentalMaterial3Api
-private fun NotePicker(notes: List<Note>, currentId: String?, onPick: (String?) -> Unit) {
+private fun NotePicker(
+    notes: List<Note>,
+    currentId: String?,
+    dimScroll: Boolean,
+    onPick: (String?) -> Unit
+) {
     var showDialog by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
     val focusRequester = remember { FocusRequester() }
@@ -422,7 +434,8 @@ private fun NotePicker(notes: List<Note>, currentId: String?, onPick: (String?) 
                         FadingScrollEdges(
                             listState = listState,
                             modifier = Modifier.matchParentSize(),
-                            color = MaterialTheme.colorScheme.surface
+                            color = MaterialTheme.colorScheme.surface,
+                            enabled = dimScroll
                         )
                     }
                 }

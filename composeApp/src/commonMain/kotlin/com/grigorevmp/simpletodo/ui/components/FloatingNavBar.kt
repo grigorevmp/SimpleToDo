@@ -64,6 +64,7 @@ fun FloatingNavBar(
             glassColor.copy(alpha = 0.18f)
         )
     )
+    val fallbackColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)
     val density = LocalDensity.current
     val blurPx = with(density) { 2.dp.toPx() }
     val lensInnerPx = with(density) { 16.dp.toPx() }
@@ -103,7 +104,7 @@ fun FloatingNavBar(
                                 }
                             )
                         } else {
-                            Modifier.background(glassBrush, shape)
+                            Modifier.background(fallbackColor, shape)
                         }
                     )
             )

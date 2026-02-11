@@ -24,8 +24,10 @@ fun FadingScrollEdges(
     scrollState: ScrollState,
     modifier: Modifier = Modifier,
     height: Dp = 28.dp,
-    color: Color = MaterialTheme.colorScheme.background
+    color: Color = MaterialTheme.colorScheme.background,
+    enabled: Boolean = true
 ) {
+    if (!enabled) return
     val showTop by remember(scrollState) {
         derivedStateOf { scrollState.value > 0 }
     }
@@ -47,8 +49,10 @@ fun FadingScrollEdges(
     listState: LazyListState,
     modifier: Modifier = Modifier,
     height: Dp = 28.dp,
-    color: Color = MaterialTheme.colorScheme.background
+    color: Color = MaterialTheme.colorScheme.background,
+    enabled: Boolean = true
 ) {
+    if (!enabled) return
     val showTop by remember(listState) {
         derivedStateOf {
             listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 0

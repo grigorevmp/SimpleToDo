@@ -144,7 +144,7 @@ fun App() {
                         )
                         AppTab.SETTINGS -> emptyList()
                     },
-                    enableEffects = true,
+                    enableEffects = prefs.liquidGlass,
                     backdrop = backdrop,
                     modifier = Modifier
                         .align(Alignment.BottomCenter)

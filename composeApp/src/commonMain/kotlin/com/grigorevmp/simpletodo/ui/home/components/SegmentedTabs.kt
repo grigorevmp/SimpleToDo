@@ -45,6 +45,7 @@ fun SegmentedTabs(
             container.copy(alpha = 0.22f)
         )
     )
+    val fallbackColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)
     val active = MaterialTheme.colorScheme.primary
     val activeText = MaterialTheme.colorScheme.onPrimary
     val inactiveText = MaterialTheme.colorScheme.onSurfaceVariant
@@ -81,7 +82,7 @@ fun SegmentedTabs(
                                 }
                             )
                         } else {
-                            Modifier.background(containerBrush, RoundedCornerShape(64.dp))
+                            Modifier.background(fallbackColor, RoundedCornerShape(64.dp))
                         }
                     )
             )

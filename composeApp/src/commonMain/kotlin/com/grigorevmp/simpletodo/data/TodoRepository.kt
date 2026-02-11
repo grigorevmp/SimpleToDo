@@ -306,6 +306,22 @@ class TodoRepository(
         }
     }
 
+    suspend fun setDimScroll(enabled: Boolean) {
+        mutex.withLock {
+            val p = _prefs.value.copy(dimScroll = enabled)
+            _prefs.value = p
+            savePrefs(p)
+        }
+    }
+
+    suspend fun setLiquidGlass(enabled: Boolean) {
+        mutex.withLock {
+            val p = _prefs.value.copy(liquidGlass = enabled)
+            _prefs.value = p
+            savePrefs(p)
+        }
+    }
+
     suspend fun setReminders(enabled: Boolean) {
         mutex.withLock {
             val p = _prefs.value.copy(remindersEnabled = enabled)

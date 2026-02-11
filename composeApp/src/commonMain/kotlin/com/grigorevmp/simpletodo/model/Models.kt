@@ -89,6 +89,8 @@ data class AppPrefs(
     val sort: SortConfig = SortConfig(),
     val noteSort: NoteSortConfig = NoteSortConfig(),
     val showTagFilters: Boolean = false,
+    val dimScroll: Boolean = true,
+    val liquidGlass: Boolean = true,
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val authorAccentIndex: Int = 0,
     val tags: List<Tag> = listOf(

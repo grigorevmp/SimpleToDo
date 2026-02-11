@@ -193,7 +193,8 @@ fun HomeScreen(
                                     onOpenNote = { noteId ->
                                         val note = notes.firstOrNull { it.id == noteId }
                                         if (note != null) previewNote = note
-                                    }
+                                    },
+                                    dimScroll = prefs.dimScroll
                                 )
                             }
                         }
@@ -225,7 +226,8 @@ fun HomeScreen(
                                     onOpenNote = { noteId ->
                                         val note = notes.firstOrNull { it.id == noteId }
                                         if (note != null) previewNote = note
-                                    }
+                                    },
+                                    dimScroll = prefs.dimScroll
                                 )
                             }
                         }
@@ -268,7 +270,8 @@ fun HomeScreen(
             NotePreviewDialog(
                 note = note,
                 onEdit = { onEditNote(note.id); previewNote = null },
-                onClose = { previewNote = null }
+                onClose = { previewNote = null },
+                dimScroll = prefs.dimScroll
             )
         }
 
@@ -427,7 +430,8 @@ private fun TaskDetailsDialog(
 private fun NotePreviewDialog(
     note: Note,
     onEdit: () -> Unit,
-    onClose: () -> Unit
+    onClose: () -> Unit,
+    dimScroll: Boolean
 ) {
     val scrollState = rememberScrollState()
     AlertDialog(
@@ -454,7 +458,8 @@ private fun NotePreviewDialog(
                 FadingScrollEdges(
                     scrollState = scrollState,
                     modifier = Modifier.matchParentSize(),
-                    color = MaterialTheme.colorScheme.surface
+                    color = MaterialTheme.colorScheme.surface,
+                    enabled = dimScroll
                 )
             }
         },
@@ -679,7 +684,8 @@ private fun TimelineList(
     onDelete: (String) -> Unit,
     tagName: (String?) -> String?,
     noteTitle: (String?) -> String?,
-    onOpenNote: (String?) -> Unit
+    onOpenNote: (String?) -> Unit,
+    dimScroll: Boolean
 ) {
     val grouped = remember(tasks) {
         tasks.groupBy { t ->
@@ -721,7 +727,8 @@ private fun TimelineList(
         }
         FadingScrollEdges(
             listState = listState,
-            modifier = Modifier.matchParentSize()
+            modifier = Modifier.matchParentSize(),
+            enabled = dimScroll
         )
     }
 }
@@ -736,7 +743,8 @@ private fun FlatList(
     onDelete: (String) -> Unit,
     tagName: (String?) -> String?,
     noteTitle: (String?) -> String?,
-    onOpenNote: (String?) -> Unit
+    onOpenNote: (String?) -> Unit,
+    dimScroll: Boolean
 ) {
     val listState = rememberLazyListState()
     Box(Modifier.fillMaxWidth()) {
@@ -762,7 +770,8 @@ private fun FlatList(
         }
         FadingScrollEdges(
             listState = listState,
-            modifier = Modifier.matchParentSize()
+            modifier = Modifier.matchParentSize(),
+            enabled = dimScroll
         )
     }
 }

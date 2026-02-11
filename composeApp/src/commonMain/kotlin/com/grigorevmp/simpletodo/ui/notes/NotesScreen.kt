@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
@@ -211,10 +212,11 @@ fun NotesScreen(
                                 }
                             }
                         }
-                        FadingScrollEdges(
-                            listState = listState,
-                            modifier = Modifier.matchParentSize()
-                        )
+        FadingScrollEdges(
+            listState = listState,
+            modifier = Modifier.matchParentSize(),
+            enabled = prefs.dimScroll
+        )
                     }
                 }
             }
@@ -225,6 +227,7 @@ fun NotesScreen(
                     newFolderName = ""
                     showFolderInput = true
                 },
+                enableEffects = false,
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .padding(bottom = 96.dp)
@@ -237,6 +240,7 @@ fun NotesScreen(
                         val parent = path.dropLast(1).lastOrNull()?.id
                         currentFolderId = parent
                     },
+                    enableEffects = false,
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
                         .padding(end = 16.dp, bottom = 96.dp)
@@ -443,6 +447,7 @@ private fun EmptyNotesState(inFolder: Boolean) {
 private fun NotesActionBar(
     backdrop: com.kyant.backdrop.backdrops.LayerBackdrop,
     onNewFolder: () -> Unit,
+    enableEffects: Boolean,
     modifier: Modifier = Modifier
 ) {
     val container = MaterialTheme.colorScheme.surfaceVariant
@@ -452,6 +457,7 @@ private fun NotesActionBar(
             container.copy(alpha = 0.22f)
         )
     )
+    val fallbackColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)
     val density = LocalDensity.current
     val blurPx = with(density) { 3.dp.toPx() }
     val lensInnerPx = with(density) { 10.dp.toPx() }
@@ -461,16 +467,22 @@ private fun NotesActionBar(
         Box(
             modifier = Modifier
                 .clip(RoundedCornerShape(64.dp))
-                .drawBackdrop(
-                    backdrop = backdrop,
-                    shape = { RoundedCornerShape(64.dp) },
-                    effects = {
-                        vibrancy()
-                        blur(blurPx)
-                        lens(lensInnerPx, lensOuterPx)
-                    },
-                    onDrawSurface = {
-                        drawRect(containerBrush)
+                .then(
+                    if (enableEffects) {
+                        Modifier.drawBackdrop(
+                            backdrop = backdrop,
+                            shape = { RoundedCornerShape(64.dp) },
+                            effects = {
+                                vibrancy()
+                                blur(blurPx)
+                                lens(lensInnerPx, lensOuterPx)
+                            },
+                            onDrawSurface = {
+                                drawRect(containerBrush)
+                            }
+                        )
+                    } else {
+                        Modifier.background(fallbackColor, RoundedCornerShape(64.dp))
                     }
                 )
         ) {
@@ -505,6 +517,7 @@ private fun NotesActionBar(
 private fun BackActionButton(
     backdrop: com.kyant.backdrop.backdrops.LayerBackdrop,
     onBack: () -> Unit,
+    enableEffects: Boolean,
     modifier: Modifier = Modifier
 ) {
     val container = MaterialTheme.colorScheme.surfaceVariant
@@ -514,6 +527,7 @@ private fun BackActionButton(
             container.copy(alpha = 0.22f)
         )
     )
+    val fallbackColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)
     val density = LocalDensity.current
     val blurPx = with(density) { 3.dp.toPx() }
     val lensInnerPx = with(density) { 10.dp.toPx() }
@@ -527,16 +541,22 @@ private fun BackActionButton(
         Box(
             modifier = Modifier
                 .clip(RoundedCornerShape(64.dp))
-                .drawBackdrop(
-                    backdrop = backdrop,
-                    shape = { RoundedCornerShape(64.dp) },
-                    effects = {
-                        vibrancy()
-                        blur(blurPx)
-                        lens(lensInnerPx, lensOuterPx)
-                    },
-                    onDrawSurface = {
-                        drawRect(containerBrush)
+                .then(
+                    if (enableEffects) {
+                        Modifier.drawBackdrop(
+                            backdrop = backdrop,
+                            shape = { RoundedCornerShape(64.dp) },
+                            effects = {
+                                vibrancy()
+                                blur(blurPx)
+                                lens(lensInnerPx, lensOuterPx)
+                            },
+                            onDrawSurface = {
+                                drawRect(containerBrush)
+                            }
+                        )
+                    } else {
+                        Modifier.background(fallbackColor, RoundedCornerShape(64.dp))
                     }
                 )
         ) {

@@ -41,6 +41,7 @@ import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -72,6 +73,7 @@ fun NoteEditorScreen(
     folderId: String?,
     onDismiss: () -> Unit
 ) {
+    val prefs by repo.prefs.collectAsState()
     var title by remember { mutableStateOf(initial?.title ?: "") }
     var content by remember { mutableStateOf(TextFieldValue(initial?.content ?: "")) }
     var taskId by remember { mutableStateOf(initial?.taskId) }
@@ -167,11 +169,12 @@ fun NoteEditorScreen(
                                             modifier = Modifier.fillMaxWidth()
                                         )
 
-                                        TaskLinkPicker(
-                                            tasks = tasks,
-                                            currentId = taskId,
-                                            onPick = { taskId = it }
-                                        )
+                                TaskLinkPicker(
+                                    tasks = tasks,
+                                    currentId = taskId,
+                                    dimScroll = prefs.dimScroll,
+                                    onPick = { taskId = it }
+                                )
 
                                         OutlinedTextField(
                                             value = content,
@@ -210,7 +213,8 @@ fun NoteEditorScreen(
 
                         FadingScrollEdges(
                             scrollState = scrollState,
-                            modifier = Modifier.matchParentSize()
+                            modifier = Modifier.matchParentSize(),
+                            enabled = prefs.dimScroll
                         )
                     }
                 }
@@ -272,6 +276,7 @@ fun NoteEditorScreen(
 private fun TaskLinkPicker(
     tasks: List<TodoTask>,
     currentId: String?,
+    dimScroll: Boolean,
     onPick: (String?) -> Unit
 ) {
     var showDialog by remember { mutableStateOf(false) }
@@ -347,7 +352,8 @@ private fun TaskLinkPicker(
                         FadingScrollEdges(
                             listState = listState,
                             modifier = Modifier.matchParentSize(),
-                            color = MaterialTheme.colorScheme.surface
+                            color = MaterialTheme.colorScheme.surface,
+                            enabled = dimScroll
                         )
                     }
                 }
