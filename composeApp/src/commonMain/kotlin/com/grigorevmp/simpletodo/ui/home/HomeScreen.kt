@@ -7,7 +7,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -21,15 +20,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.FilterChip
@@ -48,9 +44,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -60,7 +54,6 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.IntSize
 import kotlinx.coroutines.isActive
@@ -81,10 +74,6 @@ import com.grigorevmp.simpletodo.util.dateKey
 import com.grigorevmp.simpletodo.util.formatDeadline
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
-import com.kyant.backdrop.drawBackdrop
-import com.kyant.backdrop.effects.blur
-import com.kyant.backdrop.effects.lens
-import com.kyant.backdrop.effects.vibrancy
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
@@ -235,11 +224,9 @@ fun HomeScreen(
                 }
 
                 SegmentedTabs(
-                    backdrop = listBackdrop,
                     leftSelected = tab == HomeTab.TIMELINE,
                     onLeft = { tab = HomeTab.TIMELINE },
                     onRight = { tab = HomeTab.INBOX },
-                    enableEffects = false,
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .padding(bottom = 96.dp)
@@ -484,10 +471,10 @@ private fun InfoRow(label: String, value: String) {
 }
 
 private fun importanceLabel(i: Importance): String = when (i) {
-    Importance.LOW -> "low"
-    Importance.NORMAL -> "normal"
-    Importance.HIGH -> "high"
-    Importance.CRITICAL -> "critical"
+    Importance.LOW -> "Low"
+    Importance.NORMAL -> "Normal"
+    Importance.HIGH -> "High"
+    Importance.CRITICAL -> "Critical"
 }
 
 private fun formatHours(v: Double): String {

@@ -1,35 +1,36 @@
 package com.grigorevmp.simpletodo.platform
 
-import android.app.Activity
-import android.app.DatePickerDialog
-import android.app.TimePickerDialog
-import android.content.Context
-import android.content.ContextWrapper
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimePicker
+import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.platform.LocalContext
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toInstant
 import kotlinx.datetime.toLocalDateTime
+import kotlinx.datetime.toInstant
+import androidx.compose.material3.ExperimentalMaterial3Api
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 actual fun PlatformDateTimePicker(
     current: Instant?,
     onPicked: (Instant?) -> Unit
 ) {
-    val ctx = LocalContext.current
-    val activity = remember(ctx) { ctx.findActivity() }
     val tz = TimeZone.currentSystemDefault()
 
     val local = current?.toLocalDateTime(tz)
@@ -43,48 +44,82 @@ actual fun PlatformDateTimePicker(
             d.minute.toString().padStart(2, '0')
     }
 
-    Column(modifier = Modifier.fillMaxWidth()) {
+    var showDateDialog by remember { mutableStateOf(false) }
+    var showTimeDialog by remember { mutableStateOf(false) }
+    var pendingDateMillis by remember { mutableStateOf<Long?>(null) }
+    val base = local ?: Clock.System.now().toLocalDateTime(tz)
+
+    Row(modifier = Modifier.fillMaxWidth()) {
         OutlinedButton(
             onClick = {
-                val act = activity ?: return@OutlinedButton
-                if (act.isFinishing || act.isDestroyed) return@OutlinedButton
-                val base = local ?: Clock.System.now().toLocalDateTime(tz)
-                DatePickerDialog(
-                    act,
-                    { _, y, m0, d ->
-                        val m = m0 + 1
-                        TimePickerDialog(
-                            act,
-                            { _, hh, mm ->
-                                val picked = LocalDateTime(y, m, d, hh, mm)
-                                onPicked(picked.toInstant(tz))
-                            },
-                            base.hour,
-                            base.minute,
-                            true
-                        ).show()
-                    },
-                    base.year,
-                    base.monthNumber - 1,
-                    base.dayOfMonth
-                ).show()
+                showDateDialog = true
             },
-            modifier = Modifier.fillMaxWidth()
-        ) { Text("Pick date/time: $label") }
+            modifier = Modifier.weight(1f)
+        ) { Text("Date/time: $label") }
 
         TextButton(
             onClick = { onPicked(null) },
-            modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
             enabled = current != null
-        ) { Text("Clear deadline") }
+        ) { Text("Clear") }
     }
-}
 
-private fun Context.findActivity(): Activity? {
-    var cur: Context = this
-    while (cur is ContextWrapper) {
-        if (cur is Activity) return cur
-        cur = cur.baseContext
+    if (showDateDialog) {
+        val datePickerState = rememberDatePickerState(
+            initialSelectedDateMillis = current?.toEpochMilliseconds()
+        )
+        DatePickerDialog(
+            onDismissRequest = { showDateDialog = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val selected = datePickerState.selectedDateMillis
+                        if (selected != null) {
+                            pendingDateMillis = selected
+                            showDateDialog = false
+                            showTimeDialog = true
+                        }
+                    }
+                ) { Text("OK") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDateDialog = false }) { Text("Cancel") }
+            }
+        ) {
+            DatePicker(state = datePickerState)
+        }
     }
-    return null
+
+    if (showTimeDialog) {
+        val timePickerState = rememberTimePickerState(
+            initialHour = base.hour,
+            initialMinute = base.minute,
+            is24Hour = true
+        )
+        AlertDialog(
+            onDismissRequest = { showTimeDialog = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val selected = pendingDateMillis ?: return@TextButton
+                        val date = Instant.fromEpochMilliseconds(selected)
+                            .toLocalDateTime(tz)
+                        val picked = LocalDateTime(
+                            year = date.year,
+                            monthNumber = date.monthNumber,
+                            dayOfMonth = date.dayOfMonth,
+                            hour = timePickerState.hour,
+                            minute = timePickerState.minute
+                        )
+                        showTimeDialog = false
+                        onPicked(picked.toInstant(tz))
+                    }
+                ) { Text("OK") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showTimeDialog = false }) { Text("Cancel") }
+            },
+            title = { Text("Select time") },
+            text = { TimePicker(state = timePickerState) }
+        )
+    }
 }

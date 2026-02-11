@@ -4,12 +4,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentSize
-import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -31,28 +27,15 @@ import com.kyant.backdrop.effects.vibrancy
 
 @Composable
 fun SegmentedTabs(
-    backdrop: LayerBackdrop,
     leftSelected: Boolean,
     onLeft: () -> Unit,
     onRight: () -> Unit,
-    enableEffects: Boolean = true,
     modifier: Modifier = Modifier
 ) {
-    val container = MaterialTheme.colorScheme.surfaceVariant
-    val containerBrush = Brush.verticalGradient(
-        listOf(
-            container.copy(alpha = 0.08f),
-            container.copy(alpha = 0.22f)
-        )
-    )
     val fallbackColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)
     val active = MaterialTheme.colorScheme.primary
     val activeText = MaterialTheme.colorScheme.onPrimary
     val inactiveText = MaterialTheme.colorScheme.onSurfaceVariant
-    val density = LocalDensity.current
-    val blurPx = with(density) { 3.dp.toPx() }
-    val lensInnerPx = with(density) { 10.dp.toPx() }
-    val lensOuterPx = with(density) { 20.dp.toPx() }
 
     Box(
         modifier
@@ -67,24 +50,7 @@ fun SegmentedTabs(
                 modifier = Modifier
                     .matchParentSize()
                     .clip(MaterialTheme.shapes.large)
-                    .then(
-                        if (enableEffects) {
-                            Modifier.drawBackdrop(
-                                backdrop = backdrop,
-                                shape = { RoundedCornerShape(64.dp) },
-                                effects = {
-                                    vibrancy()
-                                    blur(blurPx)
-                                    lens(lensInnerPx, lensOuterPx)
-                                },
-                                onDrawSurface = {
-                                    drawRect(containerBrush)
-                                }
-                            )
-                        } else {
-                            Modifier.background(fallbackColor, RoundedCornerShape(64.dp))
-                        }
-                    )
+                    .background(fallbackColor, RoundedCornerShape(64.dp))
             )
 
             Row {

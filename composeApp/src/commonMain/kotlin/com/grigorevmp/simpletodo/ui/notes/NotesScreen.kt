@@ -157,7 +157,7 @@ fun NotesScreen(
 
         Box(Modifier.fillMaxSize()) {
             Column(Modifier.fillMaxSize()) {
-                if (showFolderInput) {
+                AnimatedVisibility (showFolderInput) {
                     NewFolderRow(
                         name = newFolderName,
                         onNameChange = { newFolderName = it },
@@ -227,7 +227,7 @@ fun NotesScreen(
                     newFolderName = ""
                     showFolderInput = true
                 },
-                enableEffects = false,
+                enableEffects = true,
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .padding(bottom = 96.dp)
@@ -240,7 +240,7 @@ fun NotesScreen(
                         val parent = path.dropLast(1).lastOrNull()?.id
                         currentFolderId = parent
                     },
-                    enableEffects = false,
+                    enableEffects = true,
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
                         .padding(end = 16.dp, bottom = 96.dp)
@@ -502,7 +502,7 @@ private fun NotesActionBar(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            "New Folder",
+                            "Add Folder",
                             style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.onSurface
                         )
@@ -596,6 +596,7 @@ private fun NewFolderRow(
 ) {
     Surface(
         shape = RoundedCornerShape(16.dp),
+        modifier = Modifier.padding(8.dp),
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
     ) {
         Column(
@@ -610,8 +611,9 @@ private fun NewFolderRow(
                 modifier = Modifier.fillMaxWidth()
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TextButton(onClick = onCreate) { Text("Create") }
                 TextButton(onClick = onCancel) { Text("Cancel") }
+                Spacer(modifier = Modifier.weight(1f))
+                TextButton(onClick = onCreate) { Text("Create") }
             }
         }
     }

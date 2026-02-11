@@ -1,8 +1,9 @@
 package com.grigorevmp.simpletodo.ui.notes
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.LocalOverscrollConfiguration
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,38 +13,27 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.clickable
-import androidx.compose.animation.Crossfade
-import androidx.compose.foundation.layout.ime
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Save
+import androidx.compose.material.icons.outlined.Visibility
+import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.Button
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Save
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material3.AlertDialog
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -52,8 +42,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
@@ -62,6 +50,8 @@ import com.grigorevmp.simpletodo.model.Note
 import com.grigorevmp.simpletodo.model.TodoTask
 import com.grigorevmp.simpletodo.ui.components.CloseIcon
 import com.grigorevmp.simpletodo.ui.components.FadingScrollEdges
+import com.grigorevmp.simpletodo.ui.notes.create.MarkdownToolbar
+import com.grigorevmp.simpletodo.ui.notes.create.TaskLinkPicker
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
@@ -96,17 +86,12 @@ fun NoteEditorScreen(
         scope.launch {
             if (initial == null) {
                 repo.addNote(
-                    title = t,
-                    content = content.text,
-                    taskId = taskId,
-                    folderId = folderId
+                    title = t, content = content.text, taskId = taskId, folderId = folderId
                 )
             } else {
                 repo.updateNote(
                     initial.copy(
-                        title = t,
-                        content = content.text,
-                        taskId = taskId
+                        title = t, content = content.text, taskId = taskId
                     )
                 )
             }
@@ -116,14 +101,12 @@ fun NoteEditorScreen(
 
     Surface(
         modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background
+        color = MaterialTheme.colorScheme.background,
     ) {
         Box(Modifier.fillMaxSize()) {
             Column(Modifier.fillMaxSize()) {
                 Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 18.dp, vertical = 12.dp),
+                    Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 6.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -131,10 +114,11 @@ fun NoteEditorScreen(
                         if (initial == null) "New note" else "Edit note",
                         style = MaterialTheme.typography.titleLarge
                     )
+
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         IconButton(onClick = { preview = !preview }) {
                             Icon(
-                                if (preview) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+                                if (preview) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
                                 contentDescription = if (preview) "Edit mode" else "Preview mode"
                             )
                         }
@@ -148,14 +132,10 @@ fun NoteEditorScreen(
                     LocalOverscrollConfiguration provides null
                 ) {
                     Box(
-                        Modifier
-                            .fillMaxWidth()
-                            .weight(1f)
+                        Modifier.fillMaxWidth().weight(1f)
                     ) {
                         Column(
-                            Modifier
-                                .fillMaxWidth()
-                                .verticalScroll(scrollState)
+                            Modifier.fillMaxWidth().verticalScroll(scrollState)
                                 .padding(horizontal = 18.dp),
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
@@ -169,19 +149,18 @@ fun NoteEditorScreen(
                                             modifier = Modifier.fillMaxWidth()
                                         )
 
-                                TaskLinkPicker(
-                                    tasks = tasks,
-                                    currentId = taskId,
-                                    dimScroll = prefs.dimScroll,
-                                    onPick = { taskId = it }
-                                )
+                                        TaskLinkPicker(
+                                            tasks = tasks,
+                                            currentId = taskId,
+                                            dimScroll = prefs.dimScroll,
+                                            onPick = { taskId = it })
 
                                         OutlinedTextField(
                                             value = content,
                                             onValueChange = { content = it },
-                                            label = { Text("Markdown") },
+                                            label = { Text("Note tex") },
                                             modifier = Modifier.fillMaxWidth(),
-                                            minLines = 10
+                                            minLines = 12
                                         )
                                     }
                                 } else {
@@ -219,7 +198,7 @@ fun NoteEditorScreen(
                     }
                 }
 
-                if (!preview) {
+                AnimatedVisibility(!preview) {
                     MarkdownToolbar(
                         onWrapBold = { content = wrapSelection(content, "**", "**") },
                         onWrapItalic = { content = wrapSelection(content, "*", "*") },
@@ -231,37 +210,28 @@ fun NoteEditorScreen(
                         onOrdered = { content = prefixLines(content, "1. ") },
                         onQuote = { content = prefixLines(content, "> ") },
                         onCodeBlock = { content = wrapSelection(content, "```\n", "\n```") },
-                        onLink = { content = wrapSelection(content, "[", "](url)") }
-                    )
+                        onLink = { content = wrapSelection(content, "[", "](url)") })
                 }
 
-                if (!imeVisible) {
+                AnimatedVisibility(!imeVisible) {
                     Column(
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(18.dp)
-                            .padding(bottom = 80.dp)
+                        Modifier.fillMaxWidth().padding(18.dp).padding(bottom = 80.dp)
                     ) {
                         Button(
-                            onClick = saveNote,
-                            modifier = Modifier.fillMaxWidth()
+                            onClick = saveNote, modifier = Modifier.fillMaxWidth()
                         ) { Text(if (initial == null) "Create" else "Save") }
                     }
-                } else {
-                    Spacer(Modifier.height(88.dp))
                 }
             }
 
             if (imeVisible) {
                 FloatingActionButton(
                     onClick = saveNote,
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(18.dp)
-                        .imePadding()
+                    modifier = Modifier.align(Alignment.BottomEnd).padding(8.dp).imePadding(),
+                    containerColor = MaterialTheme.colorScheme.primary
                 ) {
                     Icon(
-                        Icons.Filled.Save,
+                        Icons.Outlined.Save,
                         contentDescription = "Save",
                         tint = MaterialTheme.colorScheme.onPrimary
                     )
@@ -271,139 +241,8 @@ fun NoteEditorScreen(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun TaskLinkPicker(
-    tasks: List<TodoTask>,
-    currentId: String?,
-    dimScroll: Boolean,
-    onPick: (String?) -> Unit
-) {
-    var showDialog by remember { mutableStateOf(false) }
-    var query by remember { mutableStateOf("") }
-    val focusRequester = remember { FocusRequester() }
-    val current = tasks.firstOrNull { it.id == currentId }?.title ?: "No task"
-    val filtered = remember(tasks, query) {
-        if (query.isBlank()) tasks else tasks.filter { it.title.contains(query, ignoreCase = true) }
-    }
-    val listState = rememberLazyListState()
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { showDialog = true }
-    ) {
-        OutlinedTextField(
-            value = current,
-            onValueChange = {},
-            readOnly = true,
-            enabled = false,
-            label = { Text("Linked task") },
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = showDialog) },
-            modifier = Modifier.fillMaxWidth(),
-            colors = OutlinedTextFieldDefaults.colors(
-                disabledTextColor = MaterialTheme.colorScheme.onSurface,
-                disabledBorderColor = MaterialTheme.colorScheme.outline,
-                disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                disabledTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                disabledPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                disabledContainerColor = MaterialTheme.colorScheme.surface
-            )
-        )
-    }
-
-    if (showDialog) {
-        AlertDialog(
-            onDismissRequest = { showDialog = false },
-            title = { Text("Select task") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(
-                        value = query,
-                        onValueChange = { query = it },
-                        placeholder = { Text("Search...") },
-                        modifier = Modifier.fillMaxWidth().focusRequester(focusRequester)
-                    )
-                    Box(Modifier.fillMaxWidth().heightIn(max = 260.dp)) {
-                        LazyColumn(
-                            state = listState,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            item {
-                                DropdownMenuItem(
-                                    text = { Text("No task") },
-                                    onClick = {
-                                        onPick(null)
-                                        showDialog = false
-                                    }
-                                )
-                            }
-                            items(filtered.size) { idx ->
-                                val t = filtered[idx]
-                                DropdownMenuItem(
-                                    text = { Text(t.title) },
-                                    onClick = {
-                                        onPick(t.id)
-                                        showDialog = false
-                                    }
-                                )
-                            }
-                        }
-                        FadingScrollEdges(
-                            listState = listState,
-                            modifier = Modifier.matchParentSize(),
-                            color = MaterialTheme.colorScheme.surface,
-                            enabled = dimScroll
-                        )
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showDialog = false }) { Text("Close") }
-            }
-        )
-        LaunchedEffect(showDialog) {
-            if (showDialog) focusRequester.requestFocus()
-        }
-    }
-}
-
-@Composable
-private fun MarkdownToolbar(
-    onWrapBold: () -> Unit,
-    onWrapItalic: () -> Unit,
-    onWrapCode: () -> Unit,
-    onH1: () -> Unit,
-    onH2: () -> Unit,
-    onBullet: () -> Unit,
-    onTodo: () -> Unit,
-    onOrdered: () -> Unit,
-    onQuote: () -> Unit,
-    onCodeBlock: () -> Unit,
-    onLink: () -> Unit
-) {
-    Row(
-        Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 18.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        TextButton(onClick = onWrapBold) { Text("B") }
-        TextButton(onClick = onWrapItalic) { Text("I") }
-        TextButton(onClick = onWrapCode) { Text("`") }
-        TextButton(onClick = onCodeBlock) { Text("```") }
-        TextButton(onClick = onLink) { Text("Link") }
-        TextButton(onClick = onH1) { Text("H1") }
-        TextButton(onClick = onH2) { Text("H2") }
-        TextButton(onClick = onBullet) { Text("-") }
-        TextButton(onClick = onTodo) { Text("[ ]") }
-        TextButton(onClick = onOrdered) { Text("1.") }
-        TextButton(onClick = onQuote) { Text(">") }
-    }
-}
-
 private fun wrapSelection(
-    value: TextFieldValue,
-    prefix: String,
-    suffix: String
+    value: TextFieldValue, prefix: String, suffix: String
 ): TextFieldValue {
     val sel = value.selection
     val start = sel.start.coerceIn(0, value.text.length)
@@ -419,8 +258,7 @@ private fun wrapSelection(
     } else {
         val newText = before + prefix + selected + suffix + after
         value.copy(
-            text = newText,
-            selection = TextRange(start + prefix.length, end + prefix.length)
+            text = newText, selection = TextRange(start + prefix.length, end + prefix.length)
         )
     }
 }
@@ -440,10 +278,9 @@ private fun prefixLines(value: TextFieldValue, prefix: String): TextFieldValue {
     val prefixed = segment.lines().joinToString("\n") { line ->
         if (line.startsWith(prefix)) line else prefix + line
     }
-    val newText = text.substring(0, lineStart) + prefixed + text.substring(lineEnd)
+    val newText = text.take(lineStart) + prefixed + text.substring(lineEnd)
     val added = prefixed.length - segment.length
     return value.copy(
-        text = newText,
-        selection = TextRange(selStart + added, selEnd + added)
+        text = newText, selection = TextRange(selStart + added, selEnd + added)
     )
 }

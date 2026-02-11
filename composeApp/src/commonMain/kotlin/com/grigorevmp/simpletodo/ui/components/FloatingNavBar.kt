@@ -101,6 +101,7 @@ fun FloatingNavBar(
                                 },
                                 onDrawSurface = {
                                     drawRect(glassBrush)
+                                    drawRect(Color.Black.copy(alpha = 0.5f))
                                 }
                             )
                         } else {

@@ -43,7 +43,7 @@ actual fun PlatformDateTimePicker(
             label = { Text("YYYY-MM-DD HH:MM") },
             modifier = Modifier.fillMaxWidth()
         )
-        Row(modifier = Modifier.padding(top = 8.dp)) {
+        Row(modifier = Modifier.padding(top = 4.dp)) {
             OutlinedButton(onClick = {
                 val parsed = parse(text)
                 onPicked(parsed?.toInstant(tz))
