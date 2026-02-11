@@ -27,6 +27,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
@@ -56,7 +57,13 @@ fun FloatingNavBar(
     modifier: Modifier = Modifier
 ) {
     val shape = RoundedCornerShape(48.dp)
-    val glassColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+    val glassColor = MaterialTheme.colorScheme.surfaceVariant
+    val glassBrush = Brush.verticalGradient(
+        listOf(
+            glassColor.copy(alpha = 0.06f),
+            glassColor.copy(alpha = 0.18f)
+        )
+    )
     val density = LocalDensity.current
     val blurPx = with(density) { 2.dp.toPx() }
     val lensInnerPx = with(density) { 16.dp.toPx() }
@@ -69,9 +76,9 @@ fun FloatingNavBar(
             .padding(bottom = 8.dp),
         shape = shape,
         tonalElevation = 0.dp,
-        shadowElevation = 8.dp,
+        shadowElevation = 2.dp,
         color = Color.Transparent,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.04f))
     ) {
         Box(
             Modifier
@@ -92,11 +99,11 @@ fun FloatingNavBar(
                                     lens(lensInnerPx, lensOuterPx)
                                 },
                                 onDrawSurface = {
-                                    drawRect(glassColor)
+                                    drawRect(glassBrush)
                                 }
                             )
                         } else {
-                            Modifier.background(glassColor, shape)
+                            Modifier.background(glassBrush, shape)
                         }
                     )
             )

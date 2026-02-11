@@ -70,6 +70,15 @@ private fun buildMarkdownAnnotatedString(markdown: String, mutedColor: Color): A
                     appendInlineMarkdown(line.removePrefix("> "), boldStyle, italicStyle, codeStyle)
                     pop()
                 }
+                line.startsWith("- [ ] ") || line.startsWith("* [ ] ") -> {
+                    append("☐ ")
+                    appendInlineMarkdown(line.drop(6), boldStyle, italicStyle, codeStyle)
+                }
+                line.startsWith("- [x] ") || line.startsWith("- [X] ") ||
+                    line.startsWith("* [x] ") || line.startsWith("* [X] ") -> {
+                    append("☑ ")
+                    appendInlineMarkdown(line.drop(6), boldStyle, italicStyle, codeStyle)
+                }
                 line.startsWith("- ") || line.startsWith("* ") -> {
                     append("- ")
                     appendInlineMarkdown(line.drop(2), boldStyle, italicStyle, codeStyle)

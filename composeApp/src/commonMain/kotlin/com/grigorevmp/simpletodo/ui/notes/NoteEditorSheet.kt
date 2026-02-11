@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -18,10 +19,14 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.clickable
 import androidx.compose.animation.Crossfade
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -31,9 +36,13 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.AlertDialog
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -41,6 +50,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.text.TextRange
@@ -50,6 +60,7 @@ import com.grigorevmp.simpletodo.data.TodoRepository
 import com.grigorevmp.simpletodo.model.Note
 import com.grigorevmp.simpletodo.model.TodoTask
 import com.grigorevmp.simpletodo.ui.components.CloseIcon
+import com.grigorevmp.simpletodo.ui.components.FadingScrollEdges
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
@@ -72,144 +83,185 @@ fun NoteEditorScreen(
 
     val scope = rememberCoroutineScope()
     val scrollState = rememberScrollState()
+    val density = LocalDensity.current
+    val imeBottom = WindowInsets.ime.getBottom(density)
+    val imeVisible = imeBottom > 0
+
+    val saveNote: () -> Unit = saveNote@{
+        val t = title.trim()
+        if (t.isEmpty()) return@saveNote
+
+        scope.launch {
+            if (initial == null) {
+                repo.addNote(
+                    title = t,
+                    content = content.text,
+                    taskId = taskId,
+                    folderId = folderId
+                )
+            } else {
+                repo.updateNote(
+                    initial.copy(
+                        title = t,
+                        content = content.text,
+                        taskId = taskId
+                    )
+                )
+            }
+            onDismiss()
+        }
+    }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background
     ) {
-        Column(Modifier.fillMaxSize()) {
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 18.dp, vertical = 12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    if (initial == null) "New note" else "Edit note",
-                    style = MaterialTheme.typography.titleLarge
-                )
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = { preview = !preview }) {
-                        Icon(
-                            if (preview) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
-                            contentDescription = if (preview) "Edit mode" else "Preview mode"
-                        )
-                    }
-                    IconButton(onClick = onDismiss) {
-                        Icon(CloseIcon, contentDescription = "Close")
-                    }
-                }
-            }
-
-            androidx.compose.runtime.CompositionLocalProvider(
-                LocalOverscrollConfiguration provides null
-            ) {
-                Column(
+        Box(Modifier.fillMaxSize()) {
+            Column(Modifier.fillMaxSize()) {
+                Row(
                     Modifier
                         .fillMaxWidth()
-                        .weight(1f)
-                        .verticalScroll(scrollState)
-                        .padding(horizontal = 18.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                        .padding(horizontal = 18.dp, vertical = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Crossfade(targetState = preview, label = "note-preview") { isPreview ->
-                        if (!isPreview) {
-                            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                OutlinedTextField(
-                                    value = title,
-                                    onValueChange = { title = it },
-                                    label = { Text("Title") },
-                                    modifier = Modifier.fillMaxWidth()
-                                )
-
-                                TaskLinkPicker(
-                                    tasks = tasks,
-                                    currentId = taskId,
-                                    onPick = { taskId = it }
-                                )
-
-                                OutlinedTextField(
-                                    value = content,
-                                    onValueChange = { content = it },
-                                    label = { Text("Markdown") },
-                                    modifier = Modifier.fillMaxWidth(),
-                                    minLines = 10
-                                )
-                            }
-                        } else {
-                            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                                Text(
-                                    title.ifBlank { "Untitled note" },
-                                    style = MaterialTheme.typography.titleLarge
-                                )
-                                Text(
-                                    "Linked task: ${linkedTaskTitle ?: "No task"}",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                if (content.text.isBlank()) {
-                                    Text(
-                                        "No content",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                } else {
-                                    MarkdownText(content.text)
-                                }
-                            }
+                    Text(
+                        if (initial == null) "New note" else "Edit note",
+                        style = MaterialTheme.typography.titleLarge
+                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = { preview = !preview }) {
+                            Icon(
+                                if (preview) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+                                contentDescription = if (preview) "Edit mode" else "Preview mode"
+                            )
+                        }
+                        IconButton(onClick = onDismiss) {
+                            Icon(CloseIcon, contentDescription = "Close")
                         }
                     }
+                }
 
-                    Spacer(Modifier.height(8.dp))
+                CompositionLocalProvider(
+                    LocalOverscrollConfiguration provides null
+                ) {
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
+                    ) {
+                        Column(
+                            Modifier
+                                .fillMaxWidth()
+                                .verticalScroll(scrollState)
+                                .padding(horizontal = 18.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Crossfade(targetState = preview, label = "note-preview") { isPreview ->
+                                if (!isPreview) {
+                                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                        OutlinedTextField(
+                                            value = title,
+                                            onValueChange = { title = it },
+                                            label = { Text("Title") },
+                                            modifier = Modifier.fillMaxWidth()
+                                        )
+
+                                        TaskLinkPicker(
+                                            tasks = tasks,
+                                            currentId = taskId,
+                                            onPick = { taskId = it }
+                                        )
+
+                                        OutlinedTextField(
+                                            value = content,
+                                            onValueChange = { content = it },
+                                            label = { Text("Markdown") },
+                                            modifier = Modifier.fillMaxWidth(),
+                                            minLines = 10
+                                        )
+                                    }
+                                } else {
+                                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                        Text(
+                                            title.ifBlank { "Untitled note" },
+                                            style = MaterialTheme.typography.titleLarge
+                                        )
+                                        Text(
+                                            "Linked task: ${linkedTaskTitle ?: "No task"}",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        if (content.text.isBlank()) {
+                                            Text(
+                                                "No content",
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        } else {
+                                            MarkdownText(content.text)
+                                        }
+                                    }
+                                }
+                            }
+
+                            Spacer(Modifier.height(8.dp))
+                        }
+
+                        FadingScrollEdges(
+                            scrollState = scrollState,
+                            modifier = Modifier.matchParentSize()
+                        )
+                    }
+                }
+
+                if (!preview) {
+                    MarkdownToolbar(
+                        onWrapBold = { content = wrapSelection(content, "**", "**") },
+                        onWrapItalic = { content = wrapSelection(content, "*", "*") },
+                        onWrapCode = { content = wrapSelection(content, "`", "`") },
+                        onH1 = { content = prefixLines(content, "# ") },
+                        onH2 = { content = prefixLines(content, "## ") },
+                        onBullet = { content = prefixLines(content, "- ") },
+                        onTodo = { content = prefixLines(content, "- [ ] ") },
+                        onOrdered = { content = prefixLines(content, "1. ") },
+                        onQuote = { content = prefixLines(content, "> ") },
+                        onCodeBlock = { content = wrapSelection(content, "```\n", "\n```") },
+                        onLink = { content = wrapSelection(content, "[", "](url)") }
+                    )
+                }
+
+                if (!imeVisible) {
+                    Column(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(18.dp)
+                            .padding(bottom = 80.dp)
+                    ) {
+                        Button(
+                            onClick = saveNote,
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text(if (initial == null) "Create" else "Save") }
+                    }
+                } else {
+                    Spacer(Modifier.height(88.dp))
                 }
             }
 
-            if (!preview) {
-                MarkdownToolbar(
-                    onWrapBold = { content = wrapSelection(content, "**", "**") },
-                    onWrapItalic = { content = wrapSelection(content, "*", "*") },
-                    onWrapCode = { content = wrapSelection(content, "`", "`") },
-                    onH1 = { content = prefixLines(content, "# ") },
-                    onH2 = { content = prefixLines(content, "## ") },
-                    onBullet = { content = prefixLines(content, "- ") },
-                    onQuote = { content = prefixLines(content, "> ") }
-                )
-            }
-
-            Column(
-                Modifier
-                    .fillMaxWidth()
-                    .padding(18.dp)
-                    .padding(bottom = 80.dp)
-            ) {
-                Button(
-                    onClick = {
-                        val t = title.trim()
-                        if (t.isEmpty()) return@Button
-
-                        scope.launch {
-                            if (initial == null) {
-                                repo.addNote(
-                                    title = t,
-                                    content = content.text,
-                                    taskId = taskId,
-                                    folderId = folderId
-                                )
-                            } else {
-                                repo.updateNote(
-                                    initial.copy(
-                                        title = t,
-                                        content = content.text,
-                                        taskId = taskId
-                                    )
-                                )
-                            }
-                            onDismiss()
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) { Text(if (initial == null) "Create" else "Save") }
+            if (imeVisible) {
+                FloatingActionButton(
+                    onClick = saveNote,
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(18.dp)
+                        .imePadding()
+                ) {
+                    Icon(
+                        Icons.Filled.Save,
+                        contentDescription = "Save",
+                        tint = MaterialTheme.colorScheme.onPrimary
+                    )
+                }
             }
         }
     }
@@ -229,29 +281,34 @@ private fun TaskLinkPicker(
     val filtered = remember(tasks, query) {
         if (query.isBlank()) tasks else tasks.filter { it.title.contains(query, ignoreCase = true) }
     }
+    val listState = rememberLazyListState()
 
-    OutlinedTextField(
-        value = current,
-        onValueChange = {},
-        readOnly = true,
-        enabled = false,
-        label = { Text("Linked task") },
-        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = showDialog) },
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { showDialog = true },
-        colors = OutlinedTextFieldDefaults.colors(
-            disabledTextColor = MaterialTheme.colorScheme.onSurface,
-            disabledBorderColor = MaterialTheme.colorScheme.outline,
-            disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-            disabledTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-            disabledPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant,
-            disabledContainerColor = MaterialTheme.colorScheme.surface
+            .clickable { showDialog = true }
+    ) {
+        OutlinedTextField(
+            value = current,
+            onValueChange = {},
+            readOnly = true,
+            enabled = false,
+            label = { Text("Linked task") },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = showDialog) },
+            modifier = Modifier.fillMaxWidth(),
+            colors = OutlinedTextFieldDefaults.colors(
+                disabledTextColor = MaterialTheme.colorScheme.onSurface,
+                disabledBorderColor = MaterialTheme.colorScheme.outline,
+                disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                disabledTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                disabledPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                disabledContainerColor = MaterialTheme.colorScheme.surface
+            )
         )
-    )
+    }
 
     if (showDialog) {
-        androidx.compose.material3.AlertDialog(
+        AlertDialog(
             onDismissRequest = { showDialog = false },
             title = { Text("Select task") },
             text = {
@@ -262,28 +319,36 @@ private fun TaskLinkPicker(
                         placeholder = { Text("Search...") },
                         modifier = Modifier.fillMaxWidth().focusRequester(focusRequester)
                     )
-                    androidx.compose.foundation.lazy.LazyColumn(
-                        modifier = Modifier.fillMaxWidth().heightIn(max = 260.dp)
-                    ) {
-                        item {
-                            DropdownMenuItem(
-                                text = { Text("No task") },
-                                onClick = {
-                                    onPick(null)
-                                    showDialog = false
-                                }
-                            )
+                    Box(Modifier.fillMaxWidth().heightIn(max = 260.dp)) {
+                        LazyColumn(
+                            state = listState,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            item {
+                                DropdownMenuItem(
+                                    text = { Text("No task") },
+                                    onClick = {
+                                        onPick(null)
+                                        showDialog = false
+                                    }
+                                )
+                            }
+                            items(filtered.size) { idx ->
+                                val t = filtered[idx]
+                                DropdownMenuItem(
+                                    text = { Text(t.title) },
+                                    onClick = {
+                                        onPick(t.id)
+                                        showDialog = false
+                                    }
+                                )
+                            }
                         }
-                        items(filtered.size) { idx ->
-                            val t = filtered[idx]
-                            DropdownMenuItem(
-                                text = { Text(t.title) },
-                                onClick = {
-                                    onPick(t.id)
-                                    showDialog = false
-                                }
-                            )
-                        }
+                        FadingScrollEdges(
+                            listState = listState,
+                            modifier = Modifier.matchParentSize(),
+                            color = MaterialTheme.colorScheme.surface
+                        )
                     }
                 }
             },
@@ -291,7 +356,7 @@ private fun TaskLinkPicker(
                 TextButton(onClick = { showDialog = false }) { Text("Close") }
             }
         )
-        androidx.compose.runtime.LaunchedEffect(showDialog) {
+        LaunchedEffect(showDialog) {
             if (showDialog) focusRequester.requestFocus()
         }
     }
@@ -305,7 +370,11 @@ private fun MarkdownToolbar(
     onH1: () -> Unit,
     onH2: () -> Unit,
     onBullet: () -> Unit,
-    onQuote: () -> Unit
+    onTodo: () -> Unit,
+    onOrdered: () -> Unit,
+    onQuote: () -> Unit,
+    onCodeBlock: () -> Unit,
+    onLink: () -> Unit
 ) {
     Row(
         Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 18.dp),
@@ -314,9 +383,13 @@ private fun MarkdownToolbar(
         TextButton(onClick = onWrapBold) { Text("B") }
         TextButton(onClick = onWrapItalic) { Text("I") }
         TextButton(onClick = onWrapCode) { Text("`") }
+        TextButton(onClick = onCodeBlock) { Text("```") }
+        TextButton(onClick = onLink) { Text("Link") }
         TextButton(onClick = onH1) { Text("H1") }
         TextButton(onClick = onH2) { Text("H2") }
         TextButton(onClick = onBullet) { Text("-") }
+        TextButton(onClick = onTodo) { Text("[ ]") }
+        TextButton(onClick = onOrdered) { Text("1.") }
         TextButton(onClick = onQuote) { Text(">") }
     }
 }

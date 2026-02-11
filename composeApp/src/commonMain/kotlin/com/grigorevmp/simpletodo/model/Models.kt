@@ -71,6 +71,15 @@ data class SortConfig(
 )
 
 @Serializable
+enum class NoteSortField { DATE, NAME }
+
+@Serializable
+data class NoteSortConfig(
+    val field: NoteSortField = NoteSortField.DATE,
+    val foldersOnTop: Boolean = true
+)
+
+@Serializable
 enum class ThemeMode { SYSTEM, DYNAMIC, DIM, AUTHOR }
 
 @Serializable
@@ -78,6 +87,7 @@ data class AppPrefs(
     val remindersEnabled: Boolean = true,
     val reminderLeadMinutes: Int = 30,
     val sort: SortConfig = SortConfig(),
+    val noteSort: NoteSortConfig = NoteSortConfig(),
     val showTagFilters: Boolean = false,
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val authorAccentIndex: Int = 0,

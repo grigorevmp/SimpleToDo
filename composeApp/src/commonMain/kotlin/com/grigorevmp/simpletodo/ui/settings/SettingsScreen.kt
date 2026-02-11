@@ -6,11 +6,13 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Button
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -33,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import com.grigorevmp.simpletodo.data.TodoRepository
 import com.grigorevmp.simpletodo.model.ThemeMode
 import com.grigorevmp.simpletodo.platform.NotificationPermissionGate
+import com.grigorevmp.simpletodo.ui.components.FadingScrollEdges
 import com.grigorevmp.simpletodo.ui.theme.authorAccentColors
 import kotlinx.coroutines.launch
 
@@ -44,20 +47,24 @@ fun SettingsScreen(repo: TodoRepository) {
     var newTag by remember { mutableStateOf("") }
     var showTagsDialog by remember { mutableStateOf(false) }
 
-    LazyColumn(
-        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 14.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        item {
-            Column {
-                Text("Settings", style = MaterialTheme.typography.titleLarge)
-                Text(
-                    "Tags, notifications, and behavior",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+    val listState = rememberLazyListState()
+
+    androidx.compose.foundation.layout.Box(Modifier.fillMaxSize()) {
+        LazyColumn(
+            state = listState,
+            contentPadding = PaddingValues(horizontal = 18.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            item {
+                Column {
+                    Text("Settings", style = MaterialTheme.typography.titleLarge)
+                    Text(
+                        "Tags, notifications, and behavior",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
-        }
 
         item {
             Surface(
@@ -170,6 +177,12 @@ fun SettingsScreen(repo: TodoRepository) {
         }
 
         item { Spacer(Modifier.height(90.dp)) }
+        }
+
+        FadingScrollEdges(
+            listState = listState,
+            modifier = Modifier.matchParentSize()
+        )
     }
 
     if (showTagsDialog) {
@@ -197,22 +210,31 @@ fun SettingsScreen(repo: TodoRepository) {
                         modifier = Modifier.fillMaxWidth()
                     ) { Text("Add tag") }
 
-                    LazyColumn(
-                        contentPadding = PaddingValues(vertical = 6.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        items(prefs.tags, key = { it.id }) { t ->
-                            Row(
-                                Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Text(t.name, style = MaterialTheme.typography.bodyLarge)
-                                IconButton(
-                                    onClick = { scope.launch { repo.deleteTag(t.id) } }
-                                ) { Text("Delete", style = MaterialTheme.typography.labelLarge) }
+                    val tagsListState = rememberLazyListState()
+                    androidx.compose.foundation.layout.Box(Modifier.fillMaxWidth()) {
+                        LazyColumn(
+                            state = tagsListState,
+                            contentPadding = PaddingValues(vertical = 6.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            items(prefs.tags, key = { it.id }) { t ->
+                                Row(
+                                    Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(t.name, style = MaterialTheme.typography.bodyLarge)
+                                    IconButton(
+                                        onClick = { scope.launch { repo.deleteTag(t.id) } }
+                                    ) { Text("Delete", style = MaterialTheme.typography.labelLarge) }
+                                }
                             }
                         }
+                        FadingScrollEdges(
+                            listState = tagsListState,
+                            modifier = Modifier.matchParentSize(),
+                            color = MaterialTheme.colorScheme.surface
+                        )
                     }
                 }
             },

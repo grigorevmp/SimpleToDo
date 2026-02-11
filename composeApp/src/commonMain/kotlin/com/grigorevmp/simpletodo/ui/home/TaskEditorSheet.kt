@@ -35,6 +35,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -48,6 +49,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.grigorevmp.simpletodo.ui.components.FadingScrollEdges
 import com.grigorevmp.simpletodo.data.TodoRepository
 import com.grigorevmp.simpletodo.model.Importance
 import com.grigorevmp.simpletodo.model.Note
@@ -106,42 +108,48 @@ fun TaskEditorSheet(
                 androidx.compose.runtime.CompositionLocalProvider(
                     LocalOverscrollConfiguration provides null
                 ) {
-                    Column(
-                        Modifier.fillMaxWidth().weight(1f).verticalScroll(scrollState)
-                            .padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
                     ) {
-                        Row(
-                            Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
+                        Column(
+                            Modifier.fillMaxWidth().verticalScroll(scrollState)
+                                .padding(18.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            Text(
-                                if (initial == null) "New task" else "Edit task",
-                                style = MaterialTheme.typography.titleLarge,
-                                modifier = Modifier.align(Alignment.CenterVertically),
-                                textAlign = TextAlign.Center
-                            )
-                            IconButton(
-                                onClick = onDismiss,
-                                modifier = Modifier.align(Alignment.CenterVertically)
+                            Row(
+                                Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Icon(CloseIcon, contentDescription = "Close")
+                                Text(
+                                    if (initial == null) "New task" else "Edit task",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    modifier = Modifier.align(Alignment.CenterVertically),
+                                    textAlign = TextAlign.Center
+                                )
+                                IconButton(
+                                    onClick = onDismiss,
+                                    modifier = Modifier.align(Alignment.CenterVertically)
+                                ) {
+                                    Icon(CloseIcon, contentDescription = "Close")
+                                }
                             }
-                        }
 
-                        OutlinedTextField(
-                            value = title,
-                            onValueChange = { title = it },
-                            label = { Text("Task title") },
-                            modifier = Modifier.fillMaxWidth()
-                        )
+                            OutlinedTextField(
+                                value = title,
+                                onValueChange = { title = it },
+                                label = { Text("Task title") },
+                                modifier = Modifier.fillMaxWidth()
+                            )
 
-                        OutlinedTextField(
-                            value = plan,
-                            onValueChange = { plan = it },
-                            label = { Text("Plan / notes") },
-                            modifier = Modifier.fillMaxWidth(),
-                            minLines = 3
-                        )
+                            OutlinedTextField(
+                                value = plan,
+                                onValueChange = { plan = it },
+                                label = { Text("Plan / notes") },
+                                modifier = Modifier.fillMaxWidth(),
+                                minLines = 3
+                            )
 
                         TextButton(onClick = { showAdvanced = !showAdvanced }) {
                             Text(if (showAdvanced) "Hide details" else "Show details")
@@ -233,7 +241,13 @@ fun TaskEditorSheet(
                             }
                         }
 
-                        Spacer(Modifier.height(32.dp))
+                            Spacer(Modifier.height(32.dp))
+                        }
+
+                        FadingScrollEdges(
+                            scrollState = scrollState,
+                            modifier = Modifier.matchParentSize()
+                        )
                     }
                 }
 
@@ -342,26 +356,31 @@ private fun NotePicker(notes: List<Note>, currentId: String?, onPick: (String?) 
     val filtered = remember(notes, query) {
         if (query.isBlank()) notes else notes.filter { it.title.contains(query, ignoreCase = true) }
     }
+    val listState = rememberLazyListState()
 
-    OutlinedTextField(
-        value = current,
-        onValueChange = {},
-        readOnly = true,
-        enabled = false,
-        label = { Text("Note") },
-        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = showDialog) },
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { showDialog = true },
-        colors = OutlinedTextFieldDefaults.colors(
-            disabledTextColor = MaterialTheme.colorScheme.onSurface,
-            disabledBorderColor = MaterialTheme.colorScheme.outline,
-            disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-            disabledTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-            disabledPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant,
-            disabledContainerColor = MaterialTheme.colorScheme.surface
+            .clickable { showDialog = true }
+    ) {
+        OutlinedTextField(
+            value = current,
+            onValueChange = {},
+            readOnly = true,
+            enabled = false,
+            label = { Text("Note") },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = showDialog) },
+            modifier = Modifier.fillMaxWidth(),
+            colors = OutlinedTextFieldDefaults.colors(
+                disabledTextColor = MaterialTheme.colorScheme.onSurface,
+                disabledBorderColor = MaterialTheme.colorScheme.outline,
+                disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                disabledTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                disabledPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                disabledContainerColor = MaterialTheme.colorScheme.surface
+            )
         )
-    )
+    }
 
     if (showDialog) {
         androidx.compose.material3.AlertDialog(
@@ -375,28 +394,36 @@ private fun NotePicker(notes: List<Note>, currentId: String?, onPick: (String?) 
                         placeholder = { Text("Search...") },
                         modifier = Modifier.fillMaxWidth().focusRequester(focusRequester)
                     )
-                    androidx.compose.foundation.lazy.LazyColumn(
-                        modifier = Modifier.fillMaxWidth().heightIn(max = 260.dp)
-                    ) {
-                        item {
-                            DropdownMenuItem(
-                                text = { Text("No note") },
-                                onClick = {
-                                    onPick(null)
-                                    showDialog = false
-                                }
-                            )
+                    Box(Modifier.fillMaxWidth().heightIn(max = 260.dp)) {
+                        androidx.compose.foundation.lazy.LazyColumn(
+                            state = listState,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            item {
+                                DropdownMenuItem(
+                                    text = { Text("No note") },
+                                    onClick = {
+                                        onPick(null)
+                                        showDialog = false
+                                    }
+                                )
+                            }
+                            items(filtered.size) { idx ->
+                                val n = filtered[idx]
+                                DropdownMenuItem(
+                                    text = { Text(n.title) },
+                                    onClick = {
+                                        onPick(n.id)
+                                        showDialog = false
+                                    }
+                                )
+                            }
                         }
-                        items(filtered.size) { idx ->
-                            val n = filtered[idx]
-                            DropdownMenuItem(
-                                text = { Text(n.title) },
-                                onClick = {
-                                    onPick(n.id)
-                                    showDialog = false
-                                }
-                            )
-                        }
+                        FadingScrollEdges(
+                            listState = listState,
+                            modifier = Modifier.matchParentSize(),
+                            color = MaterialTheme.colorScheme.surface
+                        )
                     }
                 }
             },

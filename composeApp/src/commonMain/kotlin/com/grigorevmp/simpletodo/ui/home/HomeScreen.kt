@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -72,6 +73,7 @@ import com.grigorevmp.simpletodo.model.TodoTask
 import com.grigorevmp.simpletodo.ui.components.ChromeDinoMascot
 import com.grigorevmp.simpletodo.ui.components.AtomSimpleIcon
 import com.grigorevmp.simpletodo.ui.components.FilterIcon
+import com.grigorevmp.simpletodo.ui.components.FadingScrollEdges
 import com.grigorevmp.simpletodo.ui.components.TagIcon
 import com.grigorevmp.simpletodo.ui.home.components.SegmentedTabs
 import com.grigorevmp.simpletodo.ui.notes.MarkdownText
@@ -432,22 +434,28 @@ private fun NotePreviewDialog(
         onDismissRequest = onClose,
         title = { Text(note.title, style = MaterialTheme.typography.titleLarge) },
         text = {
-            Column(
-                Modifier
-                    .fillMaxWidth()
-                    .heightIn(max = 360.dp)
-                    .verticalScroll(scrollState),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                if (note.content.isBlank()) {
-                    Text(
-                        "No content",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                } else {
-                    MarkdownText(note.content)
+            Box(Modifier.fillMaxWidth().heightIn(max = 360.dp)) {
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(scrollState),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    if (note.content.isBlank()) {
+                        Text(
+                            "No content",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    } else {
+                        MarkdownText(note.content)
+                    }
                 }
+                FadingScrollEdges(
+                    scrollState = scrollState,
+                    modifier = Modifier.matchParentSize(),
+                    color = MaterialTheme.colorScheme.surface
+                )
             }
         },
         confirmButton = {
@@ -678,35 +686,43 @@ private fun TimelineList(
             t.plannedAt?.let { dateKey(it) } ?: "No deadline"
         }
     }
+    val listState = rememberLazyListState()
 
-    LazyColumn(
-        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 6.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        grouped.forEach { (k, v) ->
-            item {
-                Text(
-                    k,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 10.dp, bottom = 2.dp)
-                )
+    Box(Modifier.fillMaxWidth()) {
+        LazyColumn(
+            state = listState,
+            contentPadding = PaddingValues(horizontal = 18.dp, vertical = 6.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            grouped.forEach { (k, v) ->
+                item {
+                    Text(
+                        k,
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 10.dp, bottom = 2.dp)
+                    )
+                }
+                items(v, key = { it.id }) { t ->
+                    TaskCard(
+                        task = t,
+                        tagLabel = tagName(t.tagId),
+                        noteTitle = noteTitle(t.noteId),
+                        onOpenNote = { onOpenNote(t.noteId) },
+                        onToggleDone = { onToggleDone(t.id) },
+                        onToggleSub = { subId -> onToggleSub(t.id, subId) },
+                        onOpenDetails = { onOpenDetails(t) },
+                        onEdit = { onEdit(t) },
+                        onDelete = { onDelete(t.id) }
+                    )
+                }
             }
-            items(v, key = { it.id }) { t ->
-                TaskCard(
-                    task = t,
-                    tagLabel = tagName(t.tagId),
-                    noteTitle = noteTitle(t.noteId),
-                    onOpenNote = { onOpenNote(t.noteId) },
-                    onToggleDone = { onToggleDone(t.id) },
-                    onToggleSub = { subId -> onToggleSub(t.id, subId) },
-                    onOpenDetails = { onOpenDetails(t) },
-                    onEdit = { onEdit(t) },
-                    onDelete = { onDelete(t.id) }
-                )
-            }
+            item { Spacer(Modifier.height(120.dp)) }
         }
-        item { Spacer(Modifier.height(120.dp)) }
+        FadingScrollEdges(
+            listState = listState,
+            modifier = Modifier.matchParentSize()
+        )
     }
 }
 
@@ -722,23 +738,31 @@ private fun FlatList(
     noteTitle: (String?) -> String?,
     onOpenNote: (String?) -> Unit
 ) {
-    LazyColumn(
-        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 6.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        items(tasks, key = { it.id }) { t ->
-            TaskCard(
-                task = t,
-                tagLabel = tagName(t.tagId),
-                noteTitle = noteTitle(t.noteId),
-                onOpenNote = { onOpenNote(t.noteId) },
-                onToggleDone = { onToggleDone(t.id) },
-                onToggleSub = { subId -> onToggleSub(t.id, subId) },
-                onOpenDetails = { onOpenDetails(t) },
-                onEdit = { onEdit(t) },
-                onDelete = { onDelete(t.id) }
-            )
+    val listState = rememberLazyListState()
+    Box(Modifier.fillMaxWidth()) {
+        LazyColumn(
+            state = listState,
+            contentPadding = PaddingValues(horizontal = 18.dp, vertical = 6.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            items(tasks, key = { it.id }) { t ->
+                TaskCard(
+                    task = t,
+                    tagLabel = tagName(t.tagId),
+                    noteTitle = noteTitle(t.noteId),
+                    onOpenNote = { onOpenNote(t.noteId) },
+                    onToggleDone = { onToggleDone(t.id) },
+                    onToggleSub = { subId -> onToggleSub(t.id, subId) },
+                    onOpenDetails = { onOpenDetails(t) },
+                    onEdit = { onEdit(t) },
+                    onDelete = { onDelete(t.id) }
+                )
+            }
+            item { Spacer(Modifier.height(120.dp)) }
         }
-        item { Spacer(Modifier.height(120.dp)) }
+        FadingScrollEdges(
+            listState = listState,
+            modifier = Modifier.matchParentSize()
+        )
     }
 }

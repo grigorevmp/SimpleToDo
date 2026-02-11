@@ -17,10 +17,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -38,6 +40,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
@@ -45,6 +48,9 @@ import androidx.compose.ui.unit.dp
 import com.grigorevmp.simpletodo.data.TodoRepository
 import com.grigorevmp.simpletodo.model.Note
 import com.grigorevmp.simpletodo.model.NoteFolder
+import com.grigorevmp.simpletodo.model.NoteSortField
+import com.grigorevmp.simpletodo.ui.components.FadingScrollEdges
+import com.grigorevmp.simpletodo.ui.components.FilterIcon
 import com.grigorevmp.simpletodo.ui.components.FolderIcon
 import com.grigorevmp.simpletodo.ui.components.NoteIcon
 import com.kyant.backdrop.backdrops.layerBackdrop
@@ -66,6 +72,7 @@ fun NotesScreen(
     val tasks by repo.tasks.collectAsState()
     val notes by repo.notes.collectAsState()
     val folders by repo.noteFolders.collectAsState()
+    val prefs by repo.prefs.collectAsState()
     val scope = rememberCoroutineScope()
 
     var currentFolderId by remember { mutableStateOf<String?>(null) }
@@ -77,16 +84,36 @@ fun NotesScreen(
     var editFolderName by remember { mutableStateOf("") }
     var showDeleteFolder by remember { mutableStateOf(false) }
     var deleteFolderId by remember { mutableStateOf<String?>(null) }
+    var showSort by remember { mutableStateOf(false) }
 
     val path = remember(currentFolderId, folders) { buildFolderPath(currentFolderId, folders) }
-    val childFolders = remember(currentFolderId, folders) {
-        folders.filter { it.parentId == currentFolderId }
-            .sortedBy { it.name.lowercase() }
+    val childFolders = remember(currentFolderId, folders, prefs.noteSort) {
+        val filtered = folders.filter { it.parentId == currentFolderId }
+        when (prefs.noteSort.field) {
+            NoteSortField.DATE -> filtered.sortedByDescending { it.createdAt }
+            NoteSortField.NAME -> filtered.sortedBy { it.name.lowercase() }
+        }
     }
-    val notesInFolder = remember(currentFolderId, notes) {
-        notes.filter { it.folderId == currentFolderId }
-            .sortedByDescending { it.updatedAt }
+    val notesInFolder = remember(currentFolderId, notes, prefs.noteSort) {
+        val filtered = notes.filter { it.folderId == currentFolderId }
+        when (prefs.noteSort.field) {
+            NoteSortField.DATE -> filtered.sortedByDescending { it.updatedAt }
+            NoteSortField.NAME -> filtered.sortedBy { it.title.lowercase() }
+        }
     }
+    val combinedItems = remember(childFolders, notesInFolder, prefs.noteSort) {
+        if (prefs.noteSort.foldersOnTop) {
+            childFolders.map { NotesListItem.FolderItem(it) } +
+                notesInFolder.map { NotesListItem.NoteItem(it) }
+        } else {
+            val items = mutableListOf<NotesListItem>()
+            childFolders.forEach { items.add(NotesListItem.FolderItem(it)) }
+            notesInFolder.forEach { items.add(NotesListItem.NoteItem(it)) }
+            items.sortedWith(notesComparator(prefs.noteSort.field))
+        }
+    }
+    val noteCounts = remember(notes) { notes.groupingBy { it.folderId }.eachCount() }
+    val folderCounts = remember(folders) { folders.groupingBy { it.parentId }.eachCount() }
     val backgroundColor = MaterialTheme.colorScheme.background
     val listBackdrop = rememberLayerBackdrop {
         drawRect(backgroundColor)
@@ -115,12 +142,7 @@ fun NotesScreen(
     Column(Modifier.fillMaxSize()) {
         NotesTopBar(
             path = path,
-            onBack = if (currentFolderId == null) null else {
-                {
-                    val parent = path.dropLast(1).lastOrNull()?.id
-                    currentFolderId = parent
-                }
-            }
+            onSort = { showSort = true }
         )
 
         AnimatedVisibility(visible = path.isNotEmpty()) {
@@ -156,34 +178,43 @@ fun NotesScreen(
                 if (childFolders.isEmpty() && notesInFolder.isEmpty()) {
                     EmptyNotesState(currentFolderId != null)
                 } else {
-                    LazyColumn(
-                        contentPadding = PaddingValues(16.dp).run {
-                            PaddingValues(
-                                start = calculateStartPadding(LayoutDirection.Ltr),
-                                top = 12.dp,
-                                end = calculateEndPadding(LayoutDirection.Ltr),
-                                bottom = 110.dp
-                            )
-                        },
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        items(childFolders, key = { it.id }) { folder ->
-                            FolderRow(
-                                folder = folder,
-                                noteCount = notes.count { it.folderId == folder.id },
-                                onOpen = { currentFolderId = folder.id },
-                                onLongPress = {
-                                    folderAction = folder
-                                    editFolderName = folder.name
+                    val listState = rememberLazyListState()
+                    Box(Modifier.fillMaxSize()) {
+                        LazyColumn(
+                            state = listState,
+                            contentPadding = PaddingValues(16.dp).run {
+                                PaddingValues(
+                                    start = calculateStartPadding(LayoutDirection.Ltr),
+                                    top = 12.dp,
+                                    end = calculateEndPadding(LayoutDirection.Ltr),
+                                    bottom = 110.dp
+                                )
+                            },
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            items(combinedItems, key = { it.key }) { item ->
+                                when (item) {
+                                    is NotesListItem.FolderItem -> FolderRow(
+                                        folder = item.folder,
+                                        noteCount = noteCounts[item.folder.id] ?: 0,
+                                        folderCount = folderCounts[item.folder.id] ?: 0,
+                                        onOpen = { currentFolderId = item.folder.id },
+                                        onLongPress = {
+                                            folderAction = item.folder
+                                            editFolderName = item.folder.name
+                                        }
+                                    )
+                                    is NotesListItem.NoteItem -> NoteRow(
+                                        note = item.note,
+                                        onOpen = { editNote = item.note; showEditor = true }
+                                    )
                                 }
-                            )
+                            }
                         }
-                        items(notesInFolder, key = { it.id }) { note ->
-                            NoteRow(
-                                note = note,
-                                onOpen = { editNote = note; showEditor = true }
-                            )
-                        }
+                        FadingScrollEdges(
+                            listState = listState,
+                            modifier = Modifier.matchParentSize()
+                        )
                     }
                 }
             }
@@ -221,6 +252,14 @@ fun NotesScreen(
             tasks = tasks,
             folderId = currentFolderId,
             onDismiss = { showEditor = false }
+        )
+    }
+
+    if (showSort) {
+        NotesSortSheet(
+            current = prefs.noteSort,
+            onApply = { cfg -> scope.launch { repo.setNoteSort(cfg) } },
+            onDismiss = { showSort = false }
         )
     }
 
@@ -281,7 +320,7 @@ fun NotesScreen(
 }
 
 @Composable
-private fun NotesTopBar(path: List<NoteFolder>, onBack: (() -> Unit)?) {
+private fun NotesTopBar(path: List<NoteFolder>, onSort: () -> Unit) {
     val title = if (path.isEmpty()) "Notes" else path.last().name
     Row(
         Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
@@ -289,8 +328,11 @@ private fun NotesTopBar(path: List<NoteFolder>, onBack: (() -> Unit)?) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(title, style = MaterialTheme.typography.titleLarge)
-        if (onBack != null) {
-            TextButton(onClick = onBack) { Text("Back") }
+        IconButton(onClick = onSort) {
+            Icon(
+                imageVector = FilterIcon,
+                contentDescription = "Filter"
+            )
         }
     }
 }
@@ -299,6 +341,7 @@ private fun NotesTopBar(path: List<NoteFolder>, onBack: (() -> Unit)?) {
 private fun FolderRow(
     folder: NoteFolder,
     noteCount: Int,
+    folderCount: Int,
     onOpen: () -> Unit,
     onLongPress: () -> Unit
 ) {
@@ -323,7 +366,7 @@ private fun FolderRow(
             Column(Modifier.weight(1f)) {
                 Text(folder.name, style = MaterialTheme.typography.titleMedium)
                 Text(
-                    "$noteCount notes",
+                    "$folderCount folders • $noteCount notes",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -403,6 +446,12 @@ private fun NotesActionBar(
     modifier: Modifier = Modifier
 ) {
     val container = MaterialTheme.colorScheme.surfaceVariant
+    val containerBrush = Brush.verticalGradient(
+        listOf(
+            container.copy(alpha = 0.08f),
+            container.copy(alpha = 0.22f)
+        )
+    )
     val density = LocalDensity.current
     val blurPx = with(density) { 3.dp.toPx() }
     val lensInnerPx = with(density) { 10.dp.toPx() }
@@ -421,7 +470,7 @@ private fun NotesActionBar(
                         lens(lensInnerPx, lensOuterPx)
                     },
                     onDrawSurface = {
-                        drawRect(container.copy(alpha = 0.7f))
+                        drawRect(containerBrush)
                     }
                 )
         ) {
@@ -459,6 +508,12 @@ private fun BackActionButton(
     modifier: Modifier = Modifier
 ) {
     val container = MaterialTheme.colorScheme.surfaceVariant
+    val containerBrush = Brush.verticalGradient(
+        listOf(
+            container.copy(alpha = 0.08f),
+            container.copy(alpha = 0.22f)
+        )
+    )
     val density = LocalDensity.current
     val blurPx = with(density) { 3.dp.toPx() }
     val lensInnerPx = with(density) { 10.dp.toPx() }
@@ -481,7 +536,7 @@ private fun BackActionButton(
                         lens(lensInnerPx, lensOuterPx)
                     },
                     onDrawSurface = {
-                        drawRect(container.copy(alpha = 0.7f))
+                        drawRect(containerBrush)
                     }
                 )
         ) {
@@ -557,6 +612,28 @@ private fun buildFolderPath(currentFolderId: String?, folders: List<NoteFolder>)
 private fun buildBreadcrumb(path: List<NoteFolder>): String {
     val names = path.joinToString(" / ") { it.name }
     return if (names.isBlank()) "Notes" else "Notes / $names"
+}
+
+private sealed class NotesListItem(val key: String) {
+    class FolderItem(val folder: NoteFolder) : NotesListItem("folder_${folder.id}")
+    class NoteItem(val note: Note) : NotesListItem("note_${note.id}")
+}
+
+private fun notesComparator(field: NoteSortField): Comparator<NotesListItem> {
+    return when (field) {
+        NoteSortField.DATE -> compareByDescending<NotesListItem> {
+            when (it) {
+                is NotesListItem.FolderItem -> it.folder.createdAt
+                is NotesListItem.NoteItem -> it.note.updatedAt
+            }
+        }
+        NoteSortField.NAME -> compareBy<NotesListItem> {
+            when (it) {
+                is NotesListItem.FolderItem -> it.folder.name.lowercase()
+                is NotesListItem.NoteItem -> it.note.title.lowercase()
+            }
+        }
+    }
 }
 
 private fun noteSnippet(content: String): String {

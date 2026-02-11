@@ -18,6 +18,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
@@ -38,6 +39,12 @@ fun SegmentedTabs(
     modifier: Modifier = Modifier
 ) {
     val container = MaterialTheme.colorScheme.surfaceVariant
+    val containerBrush = Brush.verticalGradient(
+        listOf(
+            container.copy(alpha = 0.08f),
+            container.copy(alpha = 0.22f)
+        )
+    )
     val active = MaterialTheme.colorScheme.primary
     val activeText = MaterialTheme.colorScheme.onPrimary
     val inactiveText = MaterialTheme.colorScheme.onSurfaceVariant
@@ -70,11 +77,11 @@ fun SegmentedTabs(
                                     lens(lensInnerPx, lensOuterPx)
                                 },
                                 onDrawSurface = {
-                                    drawRect(container.copy(alpha = 0.7f))
+                                    drawRect(containerBrush)
                                 }
                             )
                         } else {
-                            Modifier.background(container.copy(alpha = 0.7f), RoundedCornerShape(64.dp))
+                            Modifier.background(containerBrush, RoundedCornerShape(64.dp))
                         }
                     )
             )

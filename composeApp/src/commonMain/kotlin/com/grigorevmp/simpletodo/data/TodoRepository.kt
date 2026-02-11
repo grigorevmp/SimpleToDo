@@ -4,6 +4,7 @@ import com.grigorevmp.simpletodo.model.AppPrefs
 import com.grigorevmp.simpletodo.model.Importance
 import com.grigorevmp.simpletodo.model.Note
 import com.grigorevmp.simpletodo.model.NoteFolder
+import com.grigorevmp.simpletodo.model.NoteSortConfig
 import com.grigorevmp.simpletodo.model.SortConfig
 import com.grigorevmp.simpletodo.model.SortDir
 import com.grigorevmp.simpletodo.model.SortField
@@ -284,6 +285,14 @@ class TodoRepository(
     suspend fun setSort(sort: SortConfig) {
         mutex.withLock {
             val p = _prefs.value.copy(sort = sort)
+            _prefs.value = p
+            savePrefs(p)
+        }
+    }
+
+    suspend fun setNoteSort(sort: NoteSortConfig) {
+        mutex.withLock {
+            val p = _prefs.value.copy(noteSort = sort)
             _prefs.value = p
             savePrefs(p)
         }
