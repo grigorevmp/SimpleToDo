@@ -81,7 +81,8 @@ fun FloatingNavBar(
         modifier = modifier
             .wrapContentWidth()
             .animateContentSize(animationSpec = spring(dampingRatio = 0.85f, stiffness = 520f))
-            .padding(bottom = 8.dp),
+            .padding(bottom = 8.dp)
+            .padding(horizontal = 4.dp),
         shape = shape,
         tonalElevation = 0.dp,
         shadowElevation = 2.dp,

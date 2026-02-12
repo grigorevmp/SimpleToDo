@@ -22,6 +22,8 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -207,7 +209,8 @@ fun NotesScreen(
                                     )
                                     is NotesListItem.NoteItem -> NoteRow(
                                         note = item.note,
-                                        onOpen = { editNote = item.note; showEditor = true }
+                                        onOpen = { editNote = item.note; showEditor = true },
+                                        onDelete = { scope.launch { repo.deleteNote(item.note.id) } }
                                     )
                                 }
                             }
@@ -380,41 +383,68 @@ private fun FolderRow(
 }
 
 @Composable
-private fun NoteRow(note: Note, onOpen: () -> Unit) {
-    Surface(
-        onClick = onOpen,
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f)
-    ) {
-        Row(
-            Modifier.fillMaxWidth().padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                NoteIcon,
-                contentDescription = "Note",
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(22.dp)
-            )
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Text(
-                    note.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+private fun NoteRow(
+    note: Note,
+    onOpen: () -> Unit,
+    onDelete: () -> Unit
+) {
+    var showActions by remember(note.id) { mutableStateOf(false) }
+    Box {
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
+            modifier = Modifier
+                .fillMaxWidth()
+                .combinedClickable(
+                    onClick = onOpen,
+                    onLongClick = { showActions = true }
                 )
-                val snippet = noteSnippet(note.content)
-                if (snippet.isNotEmpty()) {
+        ) {
+            Row(
+                Modifier.fillMaxWidth().padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    NoteIcon,
+                    contentDescription = "Note",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(22.dp)
+                )
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
                     Text(
-                        snippet,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 2,
+                        note.title,
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
+                    val snippet = noteSnippet(note.content)
+                    if (snippet.isNotEmpty()) {
+                        Text(
+                            snippet,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
             }
+        }
+        DropdownMenu(
+            expanded = showActions,
+            onDismissRequest = { showActions = false },
+            shape = MaterialTheme.shapes.large,
+            containerColor = MaterialTheme.colorScheme.surface,
+            tonalElevation = 2.dp
+        ) {
+            DropdownMenuItem(
+                text = { Text("Delete") },
+                onClick = {
+                    showActions = false
+                    onDelete()
+                }
+            )
         }
     }
 }

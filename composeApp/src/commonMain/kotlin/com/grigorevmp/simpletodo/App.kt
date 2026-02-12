@@ -115,9 +115,9 @@ fun App() {
                     }
                 }
 
-                FloatingNavBar(
-                    tab = tab,
-                    onTab = { target ->
+                    FloatingNavBar(
+                        tab = tab,
+                        onTab = { target ->
                         val route = when (target) {
                             AppTab.HOME -> "home"
                             AppTab.NOTES -> "notes"
@@ -164,7 +164,8 @@ fun App() {
                     backdrop = backdrop,
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
-                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                        .padding(horizontal = 22.dp, vertical = 12.dp)
+                        .padding(bottom = 8.dp)
                 )
             }
         }
