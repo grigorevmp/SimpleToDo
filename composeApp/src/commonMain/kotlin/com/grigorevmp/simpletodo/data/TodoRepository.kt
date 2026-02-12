@@ -10,6 +10,7 @@ import com.grigorevmp.simpletodo.model.SortDir
 import com.grigorevmp.simpletodo.model.SortField
 import com.grigorevmp.simpletodo.model.Subtask
 import com.grigorevmp.simpletodo.model.Tag
+import com.grigorevmp.simpletodo.model.TaskNoteLink
 import com.grigorevmp.simpletodo.model.ThemeMode
 import com.grigorevmp.simpletodo.model.TodoTask
 import com.grigorevmp.simpletodo.platform.NotificationScheduler
@@ -44,6 +45,7 @@ class TodoRepository(
     private val tasksKey = "tasks_json_v1"
     private val notesKey = "notes_json_v1"
     private val foldersKey = "note_folders_json_v1"
+    private val linksKey = "task_note_links_json_v1"
     private val prefsKey = "prefs_json_v1"
 
     private val _tasks = MutableStateFlow(loadTasks())
@@ -51,6 +53,9 @@ class TodoRepository(
 
     private val _notes = MutableStateFlow(loadNotes())
     val notes: StateFlow<List<Note>> = _notes
+
+    private val _taskNoteLinks = MutableStateFlow(loadLinks())
+    val taskNoteLinks: StateFlow<List<TaskNoteLink>> = _taskNoteLinks
 
     private val _noteFolders = MutableStateFlow(loadFolders())
     val noteFolders: StateFlow<List<NoteFolder>> = _noteFolders
@@ -84,8 +89,33 @@ class TodoRepository(
             .getOrElse { emptyList() }
     }
 
+    private fun loadLinks(): List<TaskNoteLink> {
+        val raw = settings.getStringOrNull(linksKey)
+        if (raw != null) {
+            return runCatching { json.decodeFromString(ListSerializer(TaskNoteLink.serializer()), raw) }
+                .getOrElse { emptyList() }
+        }
+
+        val tasks = loadTasks()
+        val notes = loadNotes()
+        val set = LinkedHashSet<TaskNoteLink>()
+        tasks.forEach { t ->
+            t.noteId?.let { set.add(TaskNoteLink(taskId = t.id, noteId = it)) }
+        }
+        notes.forEach { n ->
+            n.taskId?.let { set.add(TaskNoteLink(taskId = it, noteId = n.id)) }
+        }
+        val migrated = set.toList()
+        saveLinks(migrated)
+        return migrated
+    }
+
     private fun saveFolders(list: List<NoteFolder>) {
         settings.putString(foldersKey, json.encodeToString(ListSerializer(NoteFolder.serializer()), list))
+    }
+
+    private fun saveLinks(list: List<TaskNoteLink>) {
+        settings.putString(linksKey, json.encodeToString(ListSerializer(TaskNoteLink.serializer()), list))
     }
 
     private fun loadPrefs(): AppPrefs {
@@ -129,7 +159,9 @@ class TodoRepository(
             _tasks.value = newList
             saveTasks(newList)
             rescheduleIfNeeded(task)
-            updateNoteLinkForTask(taskId = task.id, newNoteId = noteId, oldNoteId = null)
+            if (noteId != null) {
+                addLink(taskId = task.id, noteId = noteId)
+            }
         }
     }
 
@@ -141,7 +173,12 @@ class TodoRepository(
             _tasks.value = newList
             saveTasks(newList)
             rescheduleIfNeeded(task)
-            updateNoteLinkForTask(taskId = task.id, newNoteId = task.noteId, oldNoteId = oldNoteId)
+            if (oldNoteId != task.noteId && oldNoteId != null) {
+                removeLink(taskId = task.id, noteId = oldNoteId)
+            }
+            if (task.noteId != null) {
+                addLink(taskId = task.id, noteId = task.noteId)
+            }
         }
     }
 
@@ -151,6 +188,7 @@ class TodoRepository(
             val newList = _tasks.value.filterNot { it.id == taskId }
             _tasks.value = newList
             saveTasks(newList)
+            removeLinksForTask(taskId)
         }
     }
 
@@ -201,7 +239,9 @@ class TodoRepository(
             val newList = _notes.value + note
             _notes.value = newList
             saveNotes(newList)
-            updateTaskLinkForNote(noteId = note.id, newTaskId = taskId, oldTaskId = null)
+            if (taskId != null) {
+                addLink(taskId = taskId, noteId = note.id)
+            }
         }
     }
 
@@ -217,7 +257,12 @@ class TodoRepository(
             val newList = _notes.value.map { if (it.id == note.id) updated else it }
             _notes.value = newList
             saveNotes(newList)
-            updateTaskLinkForNote(noteId = note.id, newTaskId = updated.taskId, oldTaskId = oldTaskId)
+            if (oldTaskId != updated.taskId && oldTaskId != null) {
+                removeLink(taskId = oldTaskId, noteId = note.id)
+            }
+            if (updated.taskId != null) {
+                addLink(taskId = updated.taskId, noteId = note.id)
+            }
         }
     }
 
@@ -226,6 +271,7 @@ class TodoRepository(
             val newList = _notes.value.filterNot { it.id == noteId }
             _notes.value = newList
             saveNotes(newList)
+            removeLinksForNote(noteId)
         }
     }
 
@@ -450,89 +496,32 @@ class TodoRepository(
         }
     }
 
-    private fun updateNoteLinkForTask(taskId: String, newNoteId: String?, oldNoteId: String?) {
-        if (newNoteId == oldNoteId) return
-        var updated = _notes.value
-        var changed = false
-
-        if (newNoteId != null) {
-            val oldTaskId = updated.firstOrNull { it.id == newNoteId }?.taskId
-            if (oldTaskId != null && oldTaskId != taskId) {
-                _tasks.value = _tasks.value.map { t ->
-                    if (t.id == oldTaskId && t.noteId == newNoteId) t.copy(noteId = null) else t
-                }
-                saveTasks(_tasks.value)
-            }
-        }
-
-        if (oldNoteId != null && oldNoteId != newNoteId) {
-            updated = updated.map { n ->
-                if (n.id == oldNoteId && n.taskId == taskId) {
-                    changed = true
-                    n.copy(taskId = null)
-                } else {
-                    n
-                }
-            }
-        }
-
-        if (newNoteId != null) {
-            updated = updated.map { n ->
-                if (n.id == newNoteId && n.taskId != taskId) {
-                    changed = true
-                    n.copy(taskId = taskId)
-                } else {
-                    n
-                }
-            }
-        }
-
-        if (changed) {
-            _notes.value = updated
-            saveNotes(updated)
-        }
+    private fun addLink(taskId: String, noteId: String) {
+        val link = TaskNoteLink(taskId = taskId, noteId = noteId)
+        if (_taskNoteLinks.value.any { it.taskId == taskId && it.noteId == noteId }) return
+        val updated = _taskNoteLinks.value + link
+        _taskNoteLinks.value = updated
+        saveLinks(updated)
     }
 
-    private fun updateTaskLinkForNote(noteId: String, newTaskId: String?, oldTaskId: String?) {
-        if (newTaskId == oldTaskId) return
-        var updated = _tasks.value
-        var changed = false
+    private fun removeLink(taskId: String, noteId: String) {
+        val updated = _taskNoteLinks.value.filterNot { it.taskId == taskId && it.noteId == noteId }
+        if (updated.size == _taskNoteLinks.value.size) return
+        _taskNoteLinks.value = updated
+        saveLinks(updated)
+    }
 
-        if (newTaskId != null) {
-            val oldNoteId = updated.firstOrNull { it.id == newTaskId }?.noteId
-            if (oldNoteId != null && oldNoteId != noteId) {
-                _notes.value = _notes.value.map { n ->
-                    if (n.id == oldNoteId && n.taskId == newTaskId) n.copy(taskId = null) else n
-                }
-                saveNotes(_notes.value)
-            }
-        }
+    private fun removeLinksForTask(taskId: String) {
+        val updated = _taskNoteLinks.value.filterNot { it.taskId == taskId }
+        if (updated.size == _taskNoteLinks.value.size) return
+        _taskNoteLinks.value = updated
+        saveLinks(updated)
+    }
 
-        if (oldTaskId != null && oldTaskId != newTaskId) {
-            updated = updated.map { t ->
-                if (t.id == oldTaskId && t.noteId == noteId) {
-                    changed = true
-                    t.copy(noteId = null)
-                } else {
-                    t
-                }
-            }
-        }
-
-        if (newTaskId != null) {
-            updated = updated.map { t ->
-                if (t.id == newTaskId && t.noteId != noteId) {
-                    changed = true
-                    t.copy(noteId = noteId)
-                } else {
-                    t
-                }
-            }
-        }
-
-        if (changed) {
-            _tasks.value = updated
-            saveTasks(updated)
-        }
+    private fun removeLinksForNote(noteId: String) {
+        val updated = _taskNoteLinks.value.filterNot { it.noteId == noteId }
+        if (updated.size == _taskNoteLinks.value.size) return
+        _taskNoteLinks.value = updated
+        saveLinks(updated)
     }
 }

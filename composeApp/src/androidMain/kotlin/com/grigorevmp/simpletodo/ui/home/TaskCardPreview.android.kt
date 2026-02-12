@@ -7,12 +7,18 @@ import com.grigorevmp.simpletodo.model.Subtask
 import com.grigorevmp.simpletodo.model.ThemeMode
 import com.grigorevmp.simpletodo.model.TodoTask
 import com.grigorevmp.simpletodo.ui.theme.DinoTheme
+import com.kyant.backdrop.backdrops.LayerBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import kotlinx.datetime.Clock
 
 @Preview(name = "TaskCard - Minimal", showBackground = true)
 @Composable
 private fun TaskCardPreviewMinimal() {
     DinoTheme(dark = false, mode = ThemeMode.SYSTEM, authorAccentIndex = 0) {
+        val backdrop = rememberLayerBackdrop {
+            drawContent()
+        }
+
         TaskCard(
             task = sampleTaskMinimal,
             tagLabel = null,
@@ -21,8 +27,9 @@ private fun TaskCardPreviewMinimal() {
             onOpenDetails = {},
             onEdit = {},
             onDelete = {},
-            onOpenNote = {},
-            noteTitle = null,
+            onOpenNotes = {},
+            noteCount = 0,
+            backdrop = backdrop,
         )
     }
 }
@@ -31,6 +38,10 @@ private fun TaskCardPreviewMinimal() {
 @Composable
 private fun TaskCardPreviewPlanned() {
     DinoTheme(dark = false, mode = ThemeMode.SYSTEM, authorAccentIndex = 0) {
+        val backdrop = rememberLayerBackdrop {
+            drawContent()
+        }
+
         TaskCard(
             task = sampleTaskPlanned,
             tagLabel = "Work",
@@ -39,8 +50,9 @@ private fun TaskCardPreviewPlanned() {
             onOpenDetails = {},
             onEdit = {},
             onDelete = {},
-            noteTitle = null,
-            onOpenNote = {},
+            onOpenNotes = {},
+            noteCount = 0,
+            backdrop = backdrop,
         )
     }
 }
@@ -49,6 +61,10 @@ private fun TaskCardPreviewPlanned() {
 @Composable
 private fun TaskCardPreviewCritical() {
     DinoTheme(dark = false, mode = ThemeMode.SYSTEM, authorAccentIndex = 0) {
+        val backdrop = rememberLayerBackdrop {
+            drawContent()
+        }
+
         TaskCard(
             task = sampleTaskCritical,
             tagLabel = "Release",
@@ -57,8 +73,9 @@ private fun TaskCardPreviewCritical() {
             onOpenDetails = {},
             onEdit = {},
             onDelete = {},
-            noteTitle = null,
-            onOpenNote = {},
+            onOpenNotes = {},
+            noteCount = 0,
+            backdrop = backdrop,
         )
     }
 }
@@ -67,6 +84,10 @@ private fun TaskCardPreviewCritical() {
 @Composable
 private fun TaskCardPreviewDone() {
     DinoTheme(dark = false, mode = ThemeMode.SYSTEM, authorAccentIndex = 0) {
+        val backdrop = rememberLayerBackdrop {
+            drawContent()
+        }
+
         TaskCard(
             task = sampleTaskDone,
             tagLabel = "Home",
@@ -75,8 +96,9 @@ private fun TaskCardPreviewDone() {
             onOpenDetails = {},
             onEdit = {},
             onDelete = {},
-            noteTitle = null,
-            onOpenNote = {},
+            onOpenNotes = {},
+            noteCount = 0,
+            backdrop = backdrop,
         )
     }
 }

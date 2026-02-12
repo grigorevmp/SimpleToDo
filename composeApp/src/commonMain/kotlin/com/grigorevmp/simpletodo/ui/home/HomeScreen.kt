@@ -7,6 +7,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -21,20 +22,28 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Whatshot
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -47,11 +56,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.layout.onSizeChanged
@@ -68,12 +79,15 @@ import com.grigorevmp.simpletodo.ui.components.AtomSimpleIcon
 import com.grigorevmp.simpletodo.ui.components.FilterIcon
 import com.grigorevmp.simpletodo.ui.components.FadingScrollEdges
 import com.grigorevmp.simpletodo.ui.components.TagIcon
+import com.grigorevmp.simpletodo.ui.components.NoteIcon
 import com.grigorevmp.simpletodo.ui.home.components.SegmentedTabs
 import com.grigorevmp.simpletodo.ui.notes.MarkdownText
 import com.grigorevmp.simpletodo.util.dateKey
 import com.grigorevmp.simpletodo.util.formatDeadline
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
+import kotlinx.datetime.Clock
+import kotlinx.datetime.Instant
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
@@ -88,14 +102,17 @@ fun HomeScreen(
 ) {
     val tasks by repo.tasks.collectAsState()
     val notes by repo.notes.collectAsState()
+    val links by repo.taskNoteLinks.collectAsState()
     val prefs by repo.prefs.collectAsState() 
     val scope = rememberCoroutineScope()
 
     val sorted = remember(tasks, prefs) { repo.sortedTasks(tasks, prefs) }
+    val notesById = remember(notes) { notes.associateBy { it.id } }
 
     var showEditor by remember { mutableStateOf(false) }
     var editTask by remember { mutableStateOf<TodoTask?>(null) }
     var previewNote by remember { mutableStateOf<Note?>(null) }
+    var taskNotesSheet by remember { mutableStateOf<Pair<TodoTask, List<Note>>?>(null) }
     var showSort by remember { mutableStateOf(false) }
     var tagFilter by remember { mutableStateOf<String?>(null) }
     var tab by remember { mutableStateOf(HomeTab.TIMELINE) }
@@ -115,6 +132,17 @@ fun HomeScreen(
     val listBackdrop = rememberLayerBackdrop {
         drawRect(backgroundColor)
         drawContent()
+    }
+
+    fun notesForTask(task: TodoTask): List<Note> {
+        val list = links
+            .asSequence()
+            .filter { it.taskId == task.id }
+            .mapNotNull { notesById[it.noteId] }
+            .distinct()
+            .sortedByDescending { it.updatedAt }
+            .toList()
+        return list
     }
 
     androidx.compose.runtime.LaunchedEffect(createSignal) {
@@ -178,12 +206,15 @@ fun HomeScreen(
                                     onDelete = { id -> scope.launch { repo.deleteTask(id) } },
                                     onOpenDetails = { t -> detailsTask = t },
                                     tagName = { tagId -> prefs.tags.firstOrNull { it.id == tagId }?.name },
-                                    noteTitle = { noteId -> notes.firstOrNull { it.id == noteId }?.title },
-                                    onOpenNote = { noteId ->
-                                        val note = notes.firstOrNull { it.id == noteId }
-                                        if (note != null) previewNote = note
+                                    noteCount = { t -> notesForTask(t).size },
+                                    onOpenNotes = { t ->
+                                        val linked = notesForTask(t)
+                                        if (linked.isNotEmpty()) {
+                                            taskNotesSheet = t to linked
+                                        }
                                     },
-                                    dimScroll = prefs.dimScroll
+                                    dimScroll = prefs.dimScroll,
+                                    backdrop = listBackdrop
                                 )
                             }
                         }
@@ -211,12 +242,15 @@ fun HomeScreen(
                                     onDelete = { id -> scope.launch { repo.deleteTask(id) } },
                                     onOpenDetails = { t -> detailsTask = t },
                                     tagName = { tagId -> prefs.tags.firstOrNull { it.id == tagId }?.name },
-                                    noteTitle = { noteId -> notes.firstOrNull { it.id == noteId }?.title },
-                                    onOpenNote = { noteId ->
-                                        val note = notes.firstOrNull { it.id == noteId }
-                                        if (note != null) previewNote = note
+                                    noteCount = { t -> notesForTask(t).size },
+                                    onOpenNotes = { t ->
+                                        val linked = notesForTask(t)
+                                        if (linked.isNotEmpty()) {
+                                            taskNotesSheet = t to linked
+                                        }
                                     },
-                                    dimScroll = prefs.dimScroll
+                                    dimScroll = prefs.dimScroll,
+                                    backdrop = listBackdrop
                                 )
                             }
                         }
@@ -245,10 +279,19 @@ fun HomeScreen(
         }
 
         detailsTask?.let { t ->
-            TaskDetailsDialog(
+            TaskDetailsSheet(
                 task = t,
                 tagName = { tagId -> prefs.tags.firstOrNull { it.id == tagId }?.name },
-                noteTitle = { noteId -> notes.firstOrNull { it.id == noteId }?.title },
+                notes = notesForTask(t),
+                onOpenNotes = {
+                    val linked = notesForTask(t)
+                    if (linked.isNotEmpty()) {
+                        taskNotesSheet = t to linked
+                    }
+                },
+                onToggleSub = { subId ->
+                    scope.launch { repo.toggleSubtask(t.id, subId) }
+                },
                 onClose = { detailsTask = null }
             )
         }
@@ -259,6 +302,18 @@ fun HomeScreen(
                 onEdit = { onEditNote(note.id); previewNote = null },
                 onClose = { previewNote = null },
                 dimScroll = prefs.dimScroll
+            )
+        }
+
+        taskNotesSheet?.let { (task, list) ->
+            TaskNotesSheet(
+                taskTitle = task.title,
+                notes = list,
+                onOpenNote = { note ->
+                    taskNotesSheet = null
+                    previewNote = note
+                },
+                onDismiss = { taskNotesSheet = null }
             )
         }
 
@@ -311,7 +366,7 @@ private fun TopBar(
                 )
 
                 Text(
-                    "beta 0.4.1",
+                    "beta 0.6.0",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontStyle = FontStyle.Italic,
@@ -371,46 +426,101 @@ private fun TagFilters(
 }
 
 @Composable
-private fun TaskDetailsDialog(
+@OptIn(ExperimentalMaterial3Api::class)
+private fun TaskDetailsSheet(
     task: TodoTask,
     tagName: (String?) -> String?,
-    noteTitle: (String?) -> String?,
+    notes: List<Note>,
+    onOpenNotes: () -> Unit,
+    onToggleSub: (String) -> Unit,
     onClose: () -> Unit
 ) {
-    AlertDialog(
-        onDismissRequest = onClose,
-        title = { Text(task.title, style = MaterialTheme.typography.titleLarge) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                tagName(task.tagId)?.let { name ->
-                    InfoRow("Tag", name)
-                }
-                noteTitle(task.noteId)?.let { title ->
-                    InfoRow("Note", title)
-                }
-                InfoRow("Priority", importanceLabel(task.importance))
-                task.plannedAt?.let { InfoRow("Planned", formatDeadline(it)) }
-                task.deadline?.let { InfoRow("Due", formatDeadline(it)) }
-                task.estimateHours?.let { InfoRow("Estimate", formatHours(it)) }
-                if (task.plan.isNotBlank()) {
-                    HorizontalDivider()
-                    Text(task.plan, style = MaterialTheme.typography.bodyMedium)
-                }
-                if (task.subtasks.isNotEmpty()) {
-                    HorizontalDivider()
-                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text("Subtasks", style = MaterialTheme.typography.titleMedium)
-                        task.subtasks.forEach { s ->
-                            Text("• ${s.text}", style = MaterialTheme.typography.bodyMedium)
+    ModalBottomSheet(onDismissRequest = onClose) {
+        Column(
+            Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Box(Modifier.fillMaxWidth()) {
+                ImportanceFlameBackdrop(
+                    importance = task.importance,
+                    modifier = Modifier
+                        .matchParentSize()
+                        .padding(6.dp)
+                )
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(task.title, style = MaterialTheme.typography.titleLarge)
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        tagName(task.tagId)?.let { name ->
+                            TagChipLabel(name)
+                        }
+                        if (notes.isNotEmpty()) {
+                            Spacer(Modifier.width(8.dp))
+                            NoteChipLabel(
+                                count = notes.size,
+                                onOpen = onOpenNotes
+                            )
                         }
                     }
                 }
             }
-        },
-        confirmButton = {
-            TextButton(onClick = onClose) { Text("Close") }
+
+            DateInfoSection(task)
+
+            task.estimateHours?.let {
+                Surface(
+                    shape = MaterialTheme.shapes.large,
+                    color = MaterialTheme.colorScheme.surface
+                ) {
+                    Column(
+                        Modifier.fillMaxWidth().padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text("Estimate", style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            formatHours(it),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+
+            if (task.plan.isNotBlank()) {
+                Surface(
+                    shape = MaterialTheme.shapes.large,
+                    color = MaterialTheme.colorScheme.surface
+                ) {
+                    Column(
+                        Modifier.fillMaxWidth().padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text("Details", style = MaterialTheme.typography.titleMedium)
+                        Text(task.plan, style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+            }
+
+            if (task.subtasks.isNotEmpty()) {
+                Surface(
+                    shape = MaterialTheme.shapes.large,
+                    color = MaterialTheme.colorScheme.surface
+                ) {
+                    Column(
+                        Modifier.fillMaxWidth().padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text("Subtasks", style = MaterialTheme.typography.titleMedium)
+                        SubtasksInteractive(task, onToggleSub)
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(8.dp))
         }
-    )
+    }
 }
 
 @Composable
@@ -459,6 +569,69 @@ private fun NotePreviewDialog(
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TaskNotesSheet(
+    taskTitle: String,
+    notes: List<Note>,
+    onOpenNote: (Note) -> Unit,
+    onDismiss: () -> Unit
+) {
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(
+            Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("Notes", style = MaterialTheme.typography.titleLarge)
+                Text(
+                    "${notes.size} linked to \"$taskTitle\"",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            LazyColumn(
+                contentPadding = PaddingValues(bottom = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                items(notes, key = { it.id }) { note ->
+                    Surface(
+                        shape = MaterialTheme.shapes.large,
+                        color = MaterialTheme.colorScheme.surface,
+                        tonalElevation = 2.dp,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onOpenNote(note) }
+                    ) {
+                        Column(
+                            Modifier.padding(14.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                note.title.ifBlank { "Untitled" },
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                            Text(
+                                formatDeadline(note.updatedAt),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                notePreview(note),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 3,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 @Composable
 private fun InfoRow(label: String, value: String) {
     Row(
@@ -487,6 +660,209 @@ private fun formatHours(v: Double): String {
         "$intPart.$frac"
     }
     return "$text h"
+}
+
+private fun notePreview(note: Note): String {
+    val text = note.content.trim()
+    if (text.isBlank()) return "No content"
+    return text.replace("\n", " ").take(140)
+}
+
+@Composable
+private fun TagChipLabel(name: String) {
+    Surface(
+        shape = MaterialTheme.shapes.small,
+        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+    ) {
+        Row(
+            Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(TagIcon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+            Spacer(Modifier.width(6.dp))
+            Text(name, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+        }
+    }
+}
+
+@Composable
+private fun NoteChipLabel(
+    count: Int,
+    onOpen: () -> Unit
+) {
+    val label = if (count == 1) "Note" else "Notes"
+    Surface(
+        shape = MaterialTheme.shapes.small,
+        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+        modifier = Modifier.clickable { onOpen() }
+    ) {
+        Row(
+            Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(NoteIcon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+            Spacer(Modifier.width(6.dp))
+            Text(
+                if (count == 1) label else "$label $count",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+    }
+}
+
+@Composable
+private fun DateInfoSection(task: TodoTask) {
+    val planned = task.plannedAt
+    val deadline = task.deadline
+    if (planned == null && deadline == null) return
+
+    Surface(
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
+    ) {
+        Column(
+            Modifier.fillMaxWidth().padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Text("Dates", style = MaterialTheme.typography.titleMedium)
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                planned?.let {
+                    DateInfoCard(
+                        title = "Planned",
+                        instant = it
+                    )
+                }
+                deadline?.let {
+                    DateInfoCard(
+                        title = "Due",
+                        instant = it
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DateInfoCard(
+    title: String,
+    instant: Instant
+) {
+    val days = daysUntil(instant)
+    val isOverdue = instant.toEpochMilliseconds() < Clock.System.now().toEpochMilliseconds()
+    val badge = if (isOverdue) {
+        "Overdue"
+    } else {
+        "In $days days"
+    }
+    val badgeColor = if (isOverdue) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+    val badgeOn = if (isOverdue) MaterialTheme.colorScheme.onError else MaterialTheme.colorScheme.onPrimary
+
+    Surface(
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.surface
+    ) {
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(title, style = MaterialTheme.typography.labelLarge)
+                Text(
+                    formatDeadline(instant),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Surface(shape = MaterialTheme.shapes.small, color = badgeColor) {
+                Text(
+                    badge,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = badgeOn,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SubtasksInteractive(
+    task: TodoTask,
+    onToggleSub: (String) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        task.subtasks.forEach { s ->
+            Surface(
+                shape = MaterialTheme.shapes.extraSmall,
+                modifier = Modifier.fillMaxWidth(),
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f)
+            ) {
+                Row(
+                    Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Checkbox(
+                        checked = s.done,
+                        onCheckedChange = { onToggleSub(s.id) }
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(s.text, style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ImportanceFlameBackdrop(importance: Importance, modifier: Modifier = Modifier) {
+    val count = when (importance) {
+        Importance.LOW -> 0
+        Importance.NORMAL -> 1
+        Importance.HIGH -> 3
+        Importance.CRITICAL -> 6
+    }
+    if (count == 0) return
+    val sizes = listOf(18.dp, 22.dp, 26.dp, 30.dp, 34.dp, 38.dp)
+    val positions = flamePositions(count)
+    BoxWithConstraints(modifier = modifier.alpha(0.85f)) {
+        val w = maxWidth
+        val h = maxHeight
+        positions.forEachIndexed { index, (x, y) ->
+            val size = sizes[index.coerceAtMost(sizes.lastIndex)]
+            Icon(
+                imageVector = Icons.Filled.Whatshot,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
+                modifier = Modifier
+                    .width(size)
+                    .height(size)
+                    .offset(x = w * x, y = h * y)
+            )
+        }
+    }
+}
+
+private fun flamePositions(count: Int): List<Pair<Float, Float>> {
+    val all = listOf(
+        0.08f to 0.12f,
+        0.68f to 0.10f,
+        0.18f to 0.52f,
+        0.62f to 0.48f,
+        0.10f to 0.78f,
+        0.72f to 0.76f
+    )
+    return all.take(count)
+}
+
+private fun daysUntil(deadline: Instant): Int {
+    val now = Clock.System.now()
+    val diffMs = deadline.toEpochMilliseconds() - now.toEpochMilliseconds()
+    val dayMs = 24 * 60 * 60 * 1000L
+    val days = ((diffMs + dayMs - 1) / dayMs).toInt()
+    return if (days < 0) 0 else days
 }
 
 @Composable
@@ -670,13 +1046,25 @@ private fun TimelineList(
     onEdit: (TodoTask) -> Unit,
     onDelete: (String) -> Unit,
     tagName: (String?) -> String?,
-    noteTitle: (String?) -> String?,
-    onOpenNote: (String?) -> Unit,
-    dimScroll: Boolean
+    noteCount: (TodoTask) -> Int,
+    onOpenNotes: (TodoTask) -> Unit,
+    dimScroll: Boolean,
+    backdrop: com.kyant.backdrop.backdrops.LayerBackdrop
 ) {
     val grouped = remember(tasks) {
         tasks.groupBy { t ->
-            t.plannedAt?.let { dateKey(it) } ?: "No deadline"
+            val now = Clock.System.now()
+            val planned = t.plannedAt
+            val deadline = t.deadline
+            if (planned != null && planned < now) {
+                "Запланированы ранее"
+            } else if (deadline != null) {
+                dateKey(deadline)
+            } else if (planned != null) {
+                dateKey(planned)
+            } else {
+                "No deadline"
+            }
         }
     }
     val listState = rememberLazyListState()
@@ -700,8 +1088,9 @@ private fun TimelineList(
                     TaskCard(
                         task = t,
                         tagLabel = tagName(t.tagId),
-                        noteTitle = noteTitle(t.noteId),
-                        onOpenNote = { onOpenNote(t.noteId) },
+                        noteCount = noteCount(t),
+                        backdrop = backdrop,
+                        onOpenNotes = { onOpenNotes(t) },
                         onToggleDone = { onToggleDone(t.id) },
                         onToggleSub = { subId -> onToggleSub(t.id, subId) },
                         onOpenDetails = { onOpenDetails(t) },
@@ -729,9 +1118,10 @@ private fun FlatList(
     onEdit: (TodoTask) -> Unit,
     onDelete: (String) -> Unit,
     tagName: (String?) -> String?,
-    noteTitle: (String?) -> String?,
-    onOpenNote: (String?) -> Unit,
-    dimScroll: Boolean
+    noteCount: (TodoTask) -> Int,
+    onOpenNotes: (TodoTask) -> Unit,
+    dimScroll: Boolean,
+    backdrop: com.kyant.backdrop.backdrops.LayerBackdrop
 ) {
     val listState = rememberLazyListState()
     Box(Modifier.fillMaxWidth()) {
@@ -744,8 +1134,9 @@ private fun FlatList(
                 TaskCard(
                     task = t,
                     tagLabel = tagName(t.tagId),
-                    noteTitle = noteTitle(t.noteId),
-                    onOpenNote = { onOpenNote(t.noteId) },
+                    noteCount = noteCount(t),
+                    backdrop = backdrop,
+                    onOpenNotes = { onOpenNotes(t) },
                     onToggleDone = { onToggleDone(t.id) },
                     onToggleSub = { subId -> onToggleSub(t.id, subId) },
                     onOpenDetails = { onOpenDetails(t) },

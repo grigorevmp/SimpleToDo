@@ -41,6 +41,12 @@ data class Note(
 )
 
 @Serializable
+data class TaskNoteLink(
+    val taskId: String,
+    val noteId: String
+)
+
+@Serializable
 data class TodoTask(
     val id: String,
     val title: String,
