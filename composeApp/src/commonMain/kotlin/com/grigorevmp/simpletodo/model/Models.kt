@@ -91,6 +91,7 @@ data class AppPrefs(
     val showTagFilters: Boolean = false,
     val dimScroll: Boolean = true,
     val liquidGlass: Boolean = true,
+    val disableDarkTheme: Boolean = false,
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val authorAccentIndex: Int = 0,
     val tags: List<Tag> = listOf(

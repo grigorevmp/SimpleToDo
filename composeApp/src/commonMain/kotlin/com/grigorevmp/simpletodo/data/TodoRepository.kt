@@ -322,6 +322,17 @@ class TodoRepository(
         }
     }
 
+    suspend fun setDisableDarkTheme(enabled: Boolean) {
+        mutex.withLock {
+            var p = _prefs.value.copy(disableDarkTheme = enabled)
+            if (enabled && p.themeMode == ThemeMode.DIM) {
+                p = p.copy(themeMode = ThemeMode.SYSTEM)
+            }
+            _prefs.value = p
+            savePrefs(p)
+        }
+    }
+
     suspend fun setReminders(enabled: Boolean) {
         mutex.withLock {
             val p = _prefs.value.copy(remindersEnabled = enabled)

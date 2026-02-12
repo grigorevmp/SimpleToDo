@@ -28,6 +28,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
@@ -65,6 +66,12 @@ fun FloatingNavBar(
         )
     )
     val fallbackColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)
+    val isDarkSurface = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val glassOverlay = if (isDarkSurface) {
+        Color.Black.copy(alpha = 0.5f)
+    } else {
+        Color.White.copy(alpha = 0.35f)
+    }
     val density = LocalDensity.current
     val blurPx = with(density) { 2.dp.toPx() }
     val lensInnerPx = with(density) { 16.dp.toPx() }
@@ -101,7 +108,7 @@ fun FloatingNavBar(
                                 },
                                 onDrawSurface = {
                                     drawRect(glassBrush)
-                                    drawRect(Color.Black.copy(alpha = 0.5f))
+                                    drawRect(glassOverlay)
                                 }
                             )
                         } else {

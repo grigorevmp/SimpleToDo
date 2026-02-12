@@ -311,7 +311,7 @@ private fun TopBar(
                 )
 
                 Text(
-                    "beta 0.3",
+                    "beta 0.4.1",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontStyle = FontStyle.Italic,

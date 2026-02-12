@@ -27,6 +27,7 @@ import com.grigorevmp.simpletodo.ui.home.HomeScreen
 import com.grigorevmp.simpletodo.ui.notes.NotesScreen
 import com.grigorevmp.simpletodo.ui.settings.SettingsScreen
 import com.grigorevmp.simpletodo.ui.theme.DinoTheme
+import com.grigorevmp.simpletodo.platform.PlatformSystemBars
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 
@@ -37,11 +38,26 @@ fun App() {
     val dark = isSystemInDarkTheme()
     val prefs by component.repo.prefs.collectAsState()
     val mode = prefs.themeMode
-    val isDark = when (mode) {
-        ThemeMode.DIM -> true
-        else -> dark
+    val forceLight = prefs.disableDarkTheme
+    val isDark = if (forceLight) {
+        false
+    } else {
+        when (mode) {
+            ThemeMode.DIM -> true
+            else -> dark
+        }
     }
-    DinoTheme(dark = isDark, mode = mode, authorAccentIndex = prefs.authorAccentIndex) {
+    val effectiveMode = if (forceLight && mode == ThemeMode.DIM) ThemeMode.SYSTEM else mode
+    DinoTheme(dark = isDark, mode = effectiveMode, authorAccentIndex = prefs.authorAccentIndex) {
+        val navBarColor = if (isDark) {
+            MaterialTheme.colorScheme.background
+        } else {
+            MaterialTheme.colorScheme.surface
+        }
+        PlatformSystemBars(
+            isDark = isDark,
+            backgroundColor = navBarColor
+        )
         val navController = rememberNavController()
         val backStack by navController.currentBackStackEntryAsState()
         val currentRoute = backStack?.destination?.route ?: "home"

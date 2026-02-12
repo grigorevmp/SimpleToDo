@@ -42,6 +42,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
@@ -134,10 +135,6 @@ fun SettingsScreen(repo: TodoRepository) {
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = MaterialTheme.colorScheme.surface,
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surface
-                        )
                     )
                 }
             }
@@ -166,11 +163,20 @@ fun SettingsScreen(repo: TodoRepository) {
                             )
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            val dimEnabled = !prefs.disableDarkTheme
+                            val dimModifier = Modifier
+                                .alpha(if (dimEnabled) 1f else 0.5f)
+                                .padding(bottom = if (dimEnabled) 0.dp else 1.dp)
                             ThemeCard(
                                 title = "Dim",
                                 subtitle = "Dark gray",
                                 selected = prefs.themeMode == ThemeMode.DIM,
-                                onClick = { scope.launch { repo.setTheme(ThemeMode.DIM) } }
+                                onClick = {
+                                    if (dimEnabled) {
+                                        scope.launch { repo.setTheme(ThemeMode.DIM) }
+                                    }
+                                },
+                                modifier = dimModifier
                             )
                             ThemeCard(
                                 title = "Author",
@@ -180,6 +186,12 @@ fun SettingsScreen(repo: TodoRepository) {
                             )
                         }
                     }
+                    SettingToggle(
+                        title = "Disable dark theme",
+                        subtitle = "Always use light colors",
+                        checked = prefs.disableDarkTheme,
+                        onToggle = { enabled -> scope.launch { repo.setDisableDarkTheme(enabled) } }
+                    )
                     if (prefs.themeMode == ThemeMode.AUTHOR) {
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             authorAccentColors().forEachIndexed { idx, color ->
@@ -320,7 +332,7 @@ private fun AccentSwatch(
         onClick = onClick,
         shape = MaterialTheme.shapes.small,
         color = color,
-        border = if (selected) androidx.compose.foundation.BorderStroke(2.dp, MaterialTheme.colorScheme.onSurface) else null,
+        border = if (selected) BorderStroke(2.dp, MaterialTheme.colorScheme.onSurface) else null,
         modifier = Modifier.size(32.dp)
     ) {}
 }
@@ -335,7 +347,7 @@ private fun RowScope.ThemeCard(
 ) {
     val bg by animateColorAsState(
         targetValue = if (selected) {
-            MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)
+            MaterialTheme.colorScheme.primaryContainer
         } else {
             MaterialTheme.colorScheme.surface
         },
