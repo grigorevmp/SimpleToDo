@@ -7,13 +7,16 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -40,13 +43,21 @@ fun SortSheet(
 
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(
-            Modifier.fillMaxWidth().padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+            Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text("Sorting", style = MaterialTheme.typography.titleLarge)
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("Sorting", style = MaterialTheme.typography.titleLarge)
+                Text(
+                    "Pick primary and secondary ordering.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
 
             SortRow(
-                title = "Primary field",
+                title = "Primary",
+                subtitle = "Used first to order tasks",
                 field = primary,
                 dir = primaryDir,
                 onField = { primary = it },
@@ -54,7 +65,8 @@ fun SortSheet(
             )
 
             SortRow(
-                title = "Secondary field",
+                title = "Secondary",
+                subtitle = "Used to break ties",
                 field = secondary,
                 dir = secondaryDir,
                 onField = { secondary = it },
@@ -77,46 +89,95 @@ fun SortSheet(
 @Composable
 private fun SortRow(
     title: String,
+    subtitle: String,
     field: SortField,
     dir: SortDir,
     onField: (SortField) -> Unit,
     onDir: (SortDir) -> Unit
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text(title, style = MaterialTheme.typography.titleMedium)
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
+    ) {
+        Column(
+            Modifier.fillMaxWidth().padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(title, style = MaterialTheme.typography.titleMedium)
+                Text(
+                    subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
 
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            FieldMenu(field, onField)
-            DirMenu(dir, onDir)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                FieldMenu(field, onField, modifier = Modifier.weight(1f))
+                DirMenu(dir, onDir, modifier = Modifier.weight(1f))
+            }
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun FieldMenu(value: SortField, onValue: (SortField) -> Unit) {
+private fun FieldMenu(
+    value: SortField,
+    onValue: (SortField) -> Unit,
+    modifier: Modifier = Modifier
+) {
     var expanded by remember { mutableStateOf(false) }
-    OutlinedButton(onClick = { expanded = true }) {
-        Text(fieldLabel(value))
-    }
-    DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-        SortField.entries.forEach { f ->
-            DropdownMenuItem(
-                text = { Text(fieldLabel(f)) },
-                onClick = { onValue(f); expanded = false }
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text("Field", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
+            OutlinedTextField(
+                value = fieldLabel(value),
+                onValueChange = {},
+                readOnly = true,
+                singleLine = true,
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                modifier = Modifier.fillMaxWidth().menuAnchor()
             )
+            ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                SortField.entries.forEach { f ->
+                    DropdownMenuItem(
+                        text = { Text(fieldLabel(f)) },
+                        onClick = { onValue(f); expanded = false }
+                    )
+                }
+            }
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun DirMenu(value: SortDir, onValue: (SortDir) -> Unit) {
+private fun DirMenu(
+    value: SortDir,
+    onValue: (SortDir) -> Unit,
+    modifier: Modifier = Modifier
+) {
     var expanded by remember { mutableStateOf(false) }
-    OutlinedButton(onClick = { expanded = true }) {
-        Text(if (value == SortDir.ASC) "Asc" else "Desc")
-    }
-    DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-        DropdownMenuItem(text = { Text("Asc") }, onClick = { onValue(SortDir.ASC); expanded = false })
-        DropdownMenuItem(text = { Text("Desc") }, onClick = { onValue(SortDir.DESC); expanded = false })
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text("Direction", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
+            OutlinedTextField(
+                value = if (value == SortDir.ASC) "Ascending" else "Descending",
+                onValueChange = {},
+                readOnly = true,
+                singleLine = true,
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                modifier = Modifier.fillMaxWidth().menuAnchor()
+            )
+            ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                DropdownMenuItem(text = { Text("Ascending") }, onClick = { onValue(SortDir.ASC); expanded = false })
+                DropdownMenuItem(text = { Text("Descending") }, onClick = { onValue(SortDir.DESC); expanded = false })
+            }
+        }
     }
 }
 

@@ -7,11 +7,13 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -35,32 +37,72 @@ fun NotesSortSheet(
 
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(
-            Modifier.fillMaxWidth().padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+            Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text("Фильтры", style = MaterialTheme.typography.titleLarge)
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("Фильтры", style = MaterialTheme.typography.titleLarge)
+                Text(
+                    "Выберите порядок и приоритет папок.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
 
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("Сортировка", style = MaterialTheme.typography.titleMedium)
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    FilterChip(
-                        selected = field == NoteSortField.DATE,
-                        onClick = { field = NoteSortField.DATE },
-                        label = { Text("По дате") }
-                    )
-                    FilterChip(
-                        selected = field == NoteSortField.NAME,
-                        onClick = { field = NoteSortField.NAME },
-                        label = { Text("По имени") }
-                    )
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
+            ) {
+                Column(
+                    Modifier.fillMaxWidth().padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text("Сортировка", style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            "Основное поле сортировки",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        FilterChip(
+                            selected = field == NoteSortField.DATE,
+                            onClick = { field = NoteSortField.DATE },
+                            label = { Text("По дате") }
+                        )
+                        FilterChip(
+                            selected = field == NoteSortField.NAME,
+                            onClick = { field = NoteSortField.NAME },
+                            label = { Text("По имени") }
+                        )
+                    }
                 }
             }
 
-            FilterChip(
-                selected = foldersOnTop,
-                onClick = { foldersOnTop = !foldersOnTop },
-                label = { Text("Папки сверху") }
-            )
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
+            ) {
+                Column(
+                    Modifier.fillMaxWidth().padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text("Папки", style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            "Показывать папки выше заметок",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    FilterChip(
+                        selected = foldersOnTop,
+                        onClick = { foldersOnTop = !foldersOnTop },
+                        label = { Text("Папки сверху") }
+                    )
+                }
+            }
 
             Button(
                 onClick = {
