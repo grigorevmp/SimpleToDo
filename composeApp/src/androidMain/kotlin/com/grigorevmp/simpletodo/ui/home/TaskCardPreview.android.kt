@@ -30,6 +30,7 @@ private fun TaskCardPreviewMinimal() {
             onOpenNotes = {},
             noteCount = 0,
             backdrop = backdrop,
+            onClearCompleted = {},
         )
     }
 }
@@ -53,6 +54,7 @@ private fun TaskCardPreviewPlanned() {
             onOpenNotes = {},
             noteCount = 0,
             backdrop = backdrop,
+            onClearCompleted = {},
         )
     }
 }
@@ -76,6 +78,7 @@ private fun TaskCardPreviewCritical() {
             onOpenNotes = {},
             noteCount = 0,
             backdrop = backdrop,
+            onClearCompleted = {},
         )
     }
 }
@@ -99,6 +102,7 @@ private fun TaskCardPreviewDone() {
             onOpenNotes = {},
             noteCount = 0,
             backdrop = backdrop,
+            onClearCompleted = {},
         )
     }
 }

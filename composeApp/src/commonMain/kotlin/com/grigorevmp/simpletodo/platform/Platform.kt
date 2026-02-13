@@ -8,6 +8,13 @@ import kotlinx.datetime.Instant
 
 expect fun createPlatformSettings(): Settings
 
+enum class PlatformType { ANDROID, IOS }
+
+expect val platformType: PlatformType
+
+val isIos: Boolean
+    get() = platformType == PlatformType.IOS
+
 interface NotificationScheduler {
     fun schedule(task: TodoTask, leadMinutes: Int)
     fun cancel(taskId: String)

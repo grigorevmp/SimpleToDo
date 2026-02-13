@@ -23,6 +23,7 @@ import androidx.compose.material3.Text
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.res.painterResource
@@ -67,29 +68,37 @@ private fun AppSplash() {
     } else {
         androidx.compose.ui.graphics.Color(0xFFF8FAFC)
     }
+    val fg = if (isDark) Color.White else Color(0xFF0B1220)
+    val badge = if (isDark) Color(0xFF111827) else Color(0xFFE2E8F0)
     Surface(color = bg, modifier = Modifier.fillMaxSize()) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Image(
-                    painter = painterResource(id = R.drawable.ic_launcher_foreground),
-                    contentDescription = null,
-                    modifier = Modifier.size(96.dp)
-                )
+                Surface(
+                    color = badge,
+                    shape = androidx.compose.foundation.shape.CircleShape
+                ) {
+                    Image(
+                        painter = painterResource(id = R.drawable.ic_launcher_foreground),
+                        contentDescription = null,
+                        colorFilter = ColorFilter.tint(fg),
+                        modifier = Modifier.size(96.dp)
+                    )
+                }
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     AtomSpinner(
-                        color = Color.White,
+                        color = fg,
                         modifier = Modifier.size(28.dp)
                     )
                     Text(
                         text = stringResource(id = R.string.app_name),
                         style = MaterialTheme.typography.titleLarge,
-                        color = Color.White,
+                        color = fg,
                         modifier = Modifier.padding(top = 2.dp)
                     )
                 }

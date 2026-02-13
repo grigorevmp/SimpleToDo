@@ -5,6 +5,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
@@ -21,6 +22,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.offset
@@ -30,7 +32,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -42,11 +43,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Whatshot
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -54,6 +54,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -76,17 +77,22 @@ import com.grigorevmp.simpletodo.model.Tag
 import com.grigorevmp.simpletodo.model.TodoTask
 import com.grigorevmp.simpletodo.ui.components.ChromeDinoMascot
 import com.grigorevmp.simpletodo.ui.components.AtomSimpleIcon
-import com.grigorevmp.simpletodo.ui.components.FilterIcon
+import com.grigorevmp.simpletodo.ui.components.AppIconId
 import com.grigorevmp.simpletodo.ui.components.FadingScrollEdges
-import com.grigorevmp.simpletodo.ui.components.TagIcon
+import com.grigorevmp.simpletodo.ui.components.PlatformIcon
 import com.grigorevmp.simpletodo.ui.components.NoteIcon
+import com.grigorevmp.simpletodo.ui.components.FlameIcon
+import com.grigorevmp.simpletodo.ui.components.SimpleIcons
+import com.grigorevmp.simpletodo.ui.components.itemPlacement
+import com.grigorevmp.simpletodo.ui.components.CircleCheckbox
 import com.grigorevmp.simpletodo.ui.home.components.SegmentedTabs
 import com.grigorevmp.simpletodo.ui.notes.MarkdownText
 import com.grigorevmp.simpletodo.util.dateKey
 import com.grigorevmp.simpletodo.util.formatDeadline
+import com.grigorevmp.simpletodo.util.nowInstant
+import com.grigorevmp.simpletodo.platform.isIos
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
-import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
@@ -116,14 +122,16 @@ fun HomeScreen(
     var showSort by remember { mutableStateOf(false) }
     var tagFilter by remember { mutableStateOf<String?>(null) }
     var tab by remember { mutableStateOf(HomeTab.TIMELINE) }
-    var detailsTask by remember { mutableStateOf<TodoTask?>(null) }
+    var detailsTaskId by remember { mutableStateOf<String?>(null) }
+    val celebrationTrigger = remember { mutableIntStateOf(0) }
 
     val filtered = remember(sorted, tagFilter) {
-        when (tagFilter) {
+        val tagged = when (tagFilter) {
             null -> sorted
             "__no_tag__" -> sorted.filter { it.tagId == null }
             else -> sorted.filter { it.tagId == tagFilter }
         }
+        tagged
     }
 
     val timelineTasks = filtered.filter { it.deadline != null || it.plannedAt != null }
@@ -154,6 +162,10 @@ fun HomeScreen(
     }
 
     Box(Modifier.fillMaxSize()) {
+        CelebrationVolley(
+            trigger = celebrationTrigger.intValue,
+            modifier = Modifier.matchParentSize()
+        )
         Column(Modifier.fillMaxSize()) {
             TopBar(
                 tagsShown = prefs.showTagFilters,
@@ -191,23 +203,31 @@ fun HomeScreen(
                                     showMascot = true
                                 )
                             } else {
-                                TimelineList(
-                                    tasks = timelineTasks,
-                                    onToggleDone = { id -> scope.launch { repo.toggleDone(id) } },
-                                    onToggleSub = { taskId, subId ->
-                                        scope.launch {
-                                            repo.toggleSubtask(
-                                                taskId,
-                                                subId
-                                            )
-                                        }
-                                    },
-                                    onEdit = { t -> editTask = t; showEditor = true },
-                                    onDelete = { id -> scope.launch { repo.deleteTask(id) } },
-                                    onOpenDetails = { t -> detailsTask = t },
-                                    tagName = { tagId -> prefs.tags.firstOrNull { it.id == tagId }?.name },
-                                    noteCount = { t -> notesForTask(t).size },
-                                    onOpenNotes = { t ->
+                                    TimelineList(
+                                        tasks = timelineTasks,
+                                        onToggleDone = { id ->
+                                            val t = tasks.firstOrNull { it.id == id }
+                                            if (t != null && !t.done) {
+                                                celebrationTrigger.intValue += 1
+                                            }
+                                            scope.launch { repo.toggleDone(id) }
+                                        },
+                                        onToggleSub = { taskId, subId ->
+                                            scope.launch {
+                                                repo.toggleSubtask(
+                                                    taskId,
+                                                    subId
+                                                )
+                                            }
+                                        },
+                                        onEdit = { t -> editTask = t; showEditor = true },
+                                        onDelete = { id -> scope.launch { repo.deleteTask(id) } },
+                                        onClearCompleted = { scope.launch { repo.clearCompletedTasks() } },
+                                        showCompleted = prefs.showCompletedTasks,
+                                        onOpenDetails = { t -> detailsTaskId = t.id },
+                                        tagName = { tagId -> prefs.tags.firstOrNull { it.id == tagId }?.name },
+                                        noteCount = { t -> notesForTask(t).size },
+                                        onOpenNotes = { t ->
                                         val linked = notesForTask(t)
                                         if (linked.isNotEmpty()) {
                                             taskNotesSheet = t to linked
@@ -227,23 +247,31 @@ fun HomeScreen(
                                     showMascot = true
                                 )
                             } else {
-                                FlatList(
-                                    tasks = inboxTasks,
-                                    onToggleDone = { id -> scope.launch { repo.toggleDone(id) } },
-                                    onToggleSub = { taskId, subId ->
-                                        scope.launch {
-                                            repo.toggleSubtask(
-                                                taskId,
-                                                subId
-                                            )
-                                        }
-                                    },
-                                    onEdit = { t -> editTask = t; showEditor = true },
-                                    onDelete = { id -> scope.launch { repo.deleteTask(id) } },
-                                    onOpenDetails = { t -> detailsTask = t },
-                                    tagName = { tagId -> prefs.tags.firstOrNull { it.id == tagId }?.name },
-                                    noteCount = { t -> notesForTask(t).size },
-                                    onOpenNotes = { t ->
+                                    FlatList(
+                                        tasks = inboxTasks,
+                                        onToggleDone = { id ->
+                                            val t = tasks.firstOrNull { it.id == id }
+                                            if (t != null && !t.done) {
+                                                celebrationTrigger.intValue += 1
+                                            }
+                                            scope.launch { repo.toggleDone(id) }
+                                        },
+                                        onToggleSub = { taskId, subId ->
+                                            scope.launch {
+                                                repo.toggleSubtask(
+                                                    taskId,
+                                                    subId
+                                                )
+                                            }
+                                        },
+                                        onEdit = { t -> editTask = t; showEditor = true },
+                                        onDelete = { id -> scope.launch { repo.deleteTask(id) } },
+                                        onClearCompleted = { scope.launch { repo.clearCompletedTasks() } },
+                                        showCompleted = prefs.showCompletedTasks,
+                                        onOpenDetails = { t -> detailsTaskId = t.id },
+                                        tagName = { tagId -> prefs.tags.firstOrNull { it.id == tagId }?.name },
+                                        noteCount = { t -> notesForTask(t).size },
+                                        onOpenNotes = { t ->
                                         val linked = notesForTask(t)
                                         if (linked.isNotEmpty()) {
                                             taskNotesSheet = t to linked
@@ -278,22 +306,37 @@ fun HomeScreen(
             )
         }
 
-        detailsTask?.let { t ->
-            TaskDetailsSheet(
-                task = t,
-                tagName = { tagId -> prefs.tags.firstOrNull { it.id == tagId }?.name },
-                notes = notesForTask(t),
-                onOpenNotes = {
-                    val linked = notesForTask(t)
-                    if (linked.isNotEmpty()) {
-                        taskNotesSheet = t to linked
-                    }
-                },
-                onToggleSub = { subId ->
-                    scope.launch { repo.toggleSubtask(t.id, subId) }
-                },
-                onClose = { detailsTask = null }
-            )
+        detailsTaskId?.let { id ->
+            val current = tasks.firstOrNull { it.id == id }
+            if (current == null) {
+                detailsTaskId = null
+            } else {
+                TaskDetailsSheet(
+                    task = current,
+                    tagName = { tagId -> prefs.tags.firstOrNull { it.id == tagId }?.name },
+                    notes = notesForTask(current),
+                    onOpenNotes = {
+                        val linked = notesForTask(current)
+                        if (linked.isNotEmpty()) {
+                            taskNotesSheet = current to linked
+                        }
+                    },
+                    onToggleSub = { subId ->
+                        scope.launch { repo.toggleSubtask(current.id, subId) }
+                    },
+                    onToggleDone = {
+                        if (!current.done) {
+                            celebrationTrigger.intValue += 1
+                        }
+                        scope.launch { repo.toggleDone(current.id) }
+                    },
+                    onEdit = {
+                        editTask = current
+                        showEditor = true
+                    },
+                    onClose = { detailsTaskId = null }
+                )
+            }
         }
 
         previewNote?.let { note ->
@@ -320,6 +363,8 @@ fun HomeScreen(
         if (showSort) {
             SortSheet(
                 current = prefs.sort,
+                showCompleted = prefs.showCompletedTasks,
+                onShowCompleted = { show -> scope.launch { repo.setShowCompletedTasks(show) } },
                 onApply = { cfg -> scope.launch { repo.setSort(cfg) } },
                 onDismiss = { showSort = false }
             )
@@ -366,26 +411,29 @@ private fun TopBar(
                 )
 
                 Text(
-                    "beta 0.6.0",
+                    "beta 0.7.0",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontStyle = FontStyle.Italic,
+                    fontStyle = if (isIos) FontStyle.Normal else FontStyle.Italic,
                 )
             }
         }
 
         Row {
             IconButton(onClick = onToggleTags) {
-                Icon(
-                    imageVector = TagIcon,
+                PlatformIcon(
+                    id = AppIconId.Tag,
                     contentDescription = "Tags",
-                    tint = if(tagsShown) MaterialTheme.colorScheme.primary else LocalContentColor.current
+                    tint = if (tagsShown) MaterialTheme.colorScheme.primary else LocalContentColor.current,
+                    modifier = Modifier.size(22.dp)
                 )
             }
             IconButton(onClick = onSort) {
-                Icon(
-                    imageVector = FilterIcon,
-                    contentDescription = "Filter"
+                PlatformIcon(
+                    id = AppIconId.Filter,
+                    contentDescription = "Filter",
+                    tint = LocalContentColor.current,
+                    modifier = Modifier.size(22.dp)
                 )
             }
         }
@@ -433,92 +481,107 @@ private fun TaskDetailsSheet(
     notes: List<Note>,
     onOpenNotes: () -> Unit,
     onToggleSub: (String) -> Unit,
+    onToggleDone: () -> Unit,
+    onEdit: () -> Unit,
     onClose: () -> Unit
 ) {
     ModalBottomSheet(onDismissRequest = onClose) {
-        Column(
-            Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            Box(Modifier.fillMaxWidth()) {
-                ImportanceFlameBackdrop(
-                    importance = task.importance,
-                    modifier = Modifier
-                        .matchParentSize()
-                        .padding(6.dp)
-                )
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(task.title, style = MaterialTheme.typography.titleLarge)
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        tagName(task.tagId)?.let { name ->
-                            TagChipLabel(name)
+        Box(Modifier.fillMaxWidth()) {
+            ImportanceFlameBackdrop(
+                importance = task.importance,
+                modifier = Modifier
+                    .matchParentSize()
+                    .padding(8.dp)
+            )
+            Column(
+                Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(onClick = onEdit) { Text("Редактировать") }
+                    Spacer(Modifier.width(8.dp))
+                    TextButton(onClick = onToggleDone) {
+                        Text(if (task.done) "Снять отметку" else "Отметить выполненным")
+                    }
+                }
+
+                Box(Modifier.fillMaxWidth()) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(task.title, style = MaterialTheme.typography.titleLarge)
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            tagName(task.tagId)?.let { name ->
+                                TagChipLabel(name)
+                            }
+                            if (notes.isNotEmpty()) {
+                                Spacer(Modifier.width(8.dp))
+                                NoteChipLabel(
+                                    count = notes.size,
+                                    onOpen = onOpenNotes
+                                )
+                            }
                         }
-                        if (notes.isNotEmpty()) {
-                            Spacer(Modifier.width(8.dp))
-                            NoteChipLabel(
-                                count = notes.size,
-                                onOpen = onOpenNotes
+                    }
+                }
+
+                DateInfoSection(task)
+
+                task.estimateHours?.let {
+                    Surface(
+                        shape = MaterialTheme.shapes.large,
+                        color = MaterialTheme.colorScheme.surface
+                    ) {
+                        Column(
+                            Modifier.fillMaxWidth().padding(14.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Text("Estimate", style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                formatHours(it),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
                 }
-            }
 
-            DateInfoSection(task)
-
-            task.estimateHours?.let {
-                Surface(
-                    shape = MaterialTheme.shapes.large,
-                    color = MaterialTheme.colorScheme.surface
-                ) {
-                    Column(
-                        Modifier.fillMaxWidth().padding(14.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                if (task.plan.isNotBlank()) {
+                    Surface(
+                        shape = MaterialTheme.shapes.large,
+                        color = MaterialTheme.colorScheme.surface
                     ) {
-                        Text("Estimate", style = MaterialTheme.typography.titleMedium)
-                        Text(
-                            formatHours(it),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        Column(
+                            Modifier.fillMaxWidth().padding(14.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text("Details", style = MaterialTheme.typography.titleMedium)
+                            Text(task.plan, style = MaterialTheme.typography.bodyMedium)
+                        }
                     }
                 }
-            }
 
-            if (task.plan.isNotBlank()) {
-                Surface(
-                    shape = MaterialTheme.shapes.large,
-                    color = MaterialTheme.colorScheme.surface
-                ) {
-                    Column(
-                        Modifier.fillMaxWidth().padding(14.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                if (task.subtasks.isNotEmpty()) {
+                    Surface(
+                        shape = MaterialTheme.shapes.large,
+                        color = MaterialTheme.colorScheme.surface
                     ) {
-                        Text("Details", style = MaterialTheme.typography.titleMedium)
-                        Text(task.plan, style = MaterialTheme.typography.bodyMedium)
+                        Column(
+                            Modifier.fillMaxWidth().padding(14.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text("Subtasks", style = MaterialTheme.typography.titleMedium)
+                            SubtasksInteractive(task, onToggleSub)
+                        }
                     }
                 }
-            }
 
-            if (task.subtasks.isNotEmpty()) {
-                Surface(
-                    shape = MaterialTheme.shapes.large,
-                    color = MaterialTheme.colorScheme.surface
-                ) {
-                    Column(
-                        Modifier.fillMaxWidth().padding(14.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Text("Subtasks", style = MaterialTheme.typography.titleMedium)
-                        SubtasksInteractive(task, onToggleSub)
-                    }
-                }
+                Spacer(Modifier.height(8.dp))
             }
-
-            Spacer(Modifier.height(8.dp))
         }
     }
 }
@@ -678,7 +741,12 @@ private fun TagChipLabel(name: String) {
             Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(TagIcon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+            PlatformIcon(
+                id = AppIconId.Tag,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(20.dp)
+            )
             Spacer(Modifier.width(6.dp))
             Text(name, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
         }
@@ -719,7 +787,7 @@ private fun DateInfoSection(task: TodoTask) {
 
     Surface(
         shape = MaterialTheme.shapes.large,
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.38f)
     ) {
         Column(
             Modifier.fillMaxWidth().padding(14.dp),
@@ -750,7 +818,7 @@ private fun DateInfoCard(
     instant: Instant
 ) {
     val days = daysUntil(instant)
-    val isOverdue = instant.toEpochMilliseconds() < Clock.System.now().toEpochMilliseconds()
+    val isOverdue = instant.toEpochMilliseconds() < nowInstant().toEpochMilliseconds()
     val badge = if (isOverdue) {
         "Overdue"
     } else {
@@ -804,7 +872,7 @@ private fun SubtasksInteractive(
                     Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Checkbox(
+                    CircleCheckbox(
                         checked = s.done,
                         onCheckedChange = { onToggleSub(s.id) }
                     )
@@ -833,7 +901,7 @@ private fun ImportanceFlameBackdrop(importance: Importance, modifier: Modifier =
         positions.forEachIndexed { index, (x, y) ->
             val size = sizes[index.coerceAtMost(sizes.lastIndex)]
             Icon(
-                imageVector = Icons.Filled.Whatshot,
+                imageVector = FlameIcon,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
                 modifier = Modifier
@@ -851,14 +919,14 @@ private fun flamePositions(count: Int): List<Pair<Float, Float>> {
         0.68f to 0.10f,
         0.18f to 0.52f,
         0.62f to 0.48f,
-        0.10f to 0.78f,
-        0.72f to 0.76f
+        0.10f to 0.70f,
+        0.72f to 0.68f
     )
     return all.take(count)
 }
 
 private fun daysUntil(deadline: Instant): Int {
-    val now = Clock.System.now()
+    val now = nowInstant()
     val diffMs = deadline.toEpochMilliseconds() - now.toEpochMilliseconds()
     val dayMs = 24 * 60 * 60 * 1000L
     val days = ((diffMs + dayMs - 1) / dayMs).toInt()
@@ -965,6 +1033,217 @@ private fun MeteorField(modifier: Modifier = Modifier) {
     }
 }
 
+@Composable
+private fun CelebrationVolley(
+    trigger: Int,
+    modifier: Modifier = Modifier
+) {
+    val particles = remember { mutableStateListOf<VolleyParticle>() }
+    val meteors = remember { mutableStateListOf<MeteorParticle>() }
+    var fieldSize by remember { mutableStateOf(IntSize.Zero) }
+    var nowNanos by remember { mutableStateOf(0L) }
+    val rng = remember { Random(45677) }
+    val palette = listOf(
+        MaterialTheme.colorScheme.primary,
+        MaterialTheme.colorScheme.tertiary,
+        MaterialTheme.colorScheme.secondary,
+        MaterialTheme.colorScheme.error
+    )
+
+    LaunchedEffect(trigger, fieldSize) {
+        if (trigger == 0 || fieldSize.width == 0 || fieldSize.height == 0) return@LaunchedEffect
+        val now = withFrameNanos { it }
+        nowNanos = now
+        repeat(18) {
+            particles.add(createVolleyParticle(now, fieldSize, rng, palette))
+        }
+        repeat(8) {
+            meteors.add(createBottomMeteor(now, fieldSize, rng, palette))
+        }
+    }
+
+    LaunchedEffect(fieldSize) {
+        if (fieldSize.width == 0 || fieldSize.height == 0) return@LaunchedEffect
+        while (isActive) {
+            val now = withFrameNanos { it }
+            nowNanos = now
+            val iterator = particles.iterator()
+            while (iterator.hasNext()) {
+                val p = iterator.next()
+                if (now - p.startNanos > p.durationNanos) {
+                    iterator.remove()
+                }
+            }
+            val meteorIterator = meteors.iterator()
+            while (meteorIterator.hasNext()) {
+                val p = meteorIterator.next()
+                if (now - p.startNanos > p.durationNanos) {
+                    meteorIterator.remove()
+                }
+            }
+        }
+    }
+
+    Canvas(modifier = modifier.onSizeChanged { fieldSize = it }) {
+        val now = nowNanos
+        particles.forEach { p ->
+            val t = ((now - p.startNanos).toFloat() / p.durationNanos.toFloat()).coerceIn(0f, 1f)
+            drawVolleyParticle(p, t)
+        }
+        meteors.forEach { p ->
+            val t = ((now - p.startNanos).toFloat() / p.durationNanos.toFloat()).coerceIn(0f, 1f)
+            drawMeteorParticle(p, t)
+        }
+    }
+}
+
+private fun createBottomMeteor(
+    now: Long,
+    size: IntSize,
+    rng: Random,
+    palette: List<Color>
+): MeteorParticle {
+    val w = size.width.toFloat()
+    val h = size.height.toFloat()
+    val start = Offset(
+        x = w * (0.1f + rng.nextFloat() * 0.8f),
+        y = h + 18f
+    )
+    val end = Offset(
+        x = w * (0.15f + rng.nextFloat() * 0.7f),
+        y = h * (0.2f + rng.nextFloat() * 0.35f)
+    )
+    val c1 = Offset(
+        x = start.x + (rng.nextFloat() - 0.5f) * w * 0.35f,
+        y = start.y - h * (0.2f + rng.nextFloat() * 0.25f)
+    )
+    val c2 = Offset(
+        x = end.x + (rng.nextFloat() - 0.5f) * w * 0.35f,
+        y = end.y + h * (0.05f + rng.nextFloat() * 0.15f)
+    )
+    val duration = (700L + rng.nextInt(700)).toLong() * 1_000_000L
+    val length = 12f + rng.nextFloat() * 10f
+    val stroke = 1.6f + rng.nextFloat() * 1.0f
+    return MeteorParticle(
+        start = start,
+        c1 = c1,
+        c2 = c2,
+        end = end,
+        startNanos = now,
+        durationNanos = duration,
+        length = length,
+        stroke = stroke,
+        color = palette[rng.nextInt(palette.size)].copy(alpha = 0.65f)
+    )
+}
+
+private fun DrawScope.drawMeteorParticle(p: MeteorParticle, t: Float) {
+    val pos = cubicBezier(p.start, p.c1, p.c2, p.end, t)
+    val dir = cubicBezierTangent(p.start, p.c1, p.c2, p.end, t)
+    val tail = Offset(
+        pos.x - dir.x * p.length,
+        pos.y - dir.y * p.length
+    )
+    val alpha = (1f - t).coerceIn(0f, 1f) * 0.9f
+    drawLine(
+        color = p.color.copy(alpha = alpha),
+        start = pos,
+        end = tail,
+        strokeWidth = p.stroke,
+        cap = StrokeCap.Round,
+        pathEffect = PathEffect.cornerPathEffect(p.stroke)
+    )
+}
+
+private data class VolleyParticle(
+    val start: Offset,
+    val velocity: Offset,
+    val color: Color,
+    val length: Float,
+    val stroke: Float,
+    val startNanos: Long,
+    val durationNanos: Long,
+    val kind: VolleyKind,
+    val swayAmp: Float,
+    val swayFreq: Float,
+    val swayPhase: Float
+)
+
+private enum class VolleyKind { STREAK, DOT }
+
+private fun createVolleyParticle(
+    now: Long,
+    size: IntSize,
+    rng: Random,
+    palette: List<Color>
+): VolleyParticle {
+    val w = size.width.toFloat()
+    val h = size.height.toFloat()
+    val start = Offset(
+        x = w * (0.15f + rng.nextFloat() * 0.7f),
+        y = h + 24f
+    )
+    val speed = 780f + rng.nextFloat() * 520f
+    val angle = (-105f + rng.nextFloat() * 50f)
+    val rad = angle * (kotlin.math.PI / 180.0)
+    val vx = kotlin.math.cos(rad).toFloat() * speed
+    val vy = kotlin.math.sin(rad).toFloat() * speed
+    val streak = rng.nextFloat() > 0.35f
+    val kind = if (streak) VolleyKind.STREAK else VolleyKind.DOT
+    val length = if (streak) 18f + rng.nextFloat() * 12f else 8f + rng.nextFloat() * 6f
+    val stroke = if (streak) 2.2f + rng.nextFloat() * 1.2f else 3.0f + rng.nextFloat() * 1.4f
+    val duration = (700L + rng.nextInt(600)).toLong() * 1_000_000L
+
+    return VolleyParticle(
+        start = start,
+        velocity = Offset(vx, vy),
+        color = palette[rng.nextInt(palette.size)],
+        length = length,
+        stroke = stroke,
+        startNanos = now,
+        durationNanos = duration,
+        kind = kind,
+        swayAmp = 6f + rng.nextFloat() * 10f,
+        swayFreq = 6f + rng.nextFloat() * 8f,
+        swayPhase = rng.nextFloat() * 6.28f
+    )
+}
+
+private fun DrawScope.drawVolleyParticle(p: VolleyParticle, t: Float) {
+    val elapsedSec = (t * p.durationNanos) / 1_000_000_000f
+    val gravity = Offset(0f, 900f)
+    val drift = p.velocity * elapsedSec
+    val fall = gravity * (0.5f * elapsedSec * elapsedSec)
+    val sway = kotlin.math.sin(t * p.swayFreq + p.swayPhase) * p.swayAmp
+    val pos = p.start + drift + fall + Offset(sway, 0f)
+    val alpha = (1f - t).coerceIn(0f, 1f)
+    val color = p.color.copy(alpha = alpha)
+
+    when (p.kind) {
+        VolleyKind.STREAK -> {
+            val dir = p.velocity
+            val len = kotlin.math.sqrt(dir.x * dir.x + dir.y * dir.y).coerceAtLeast(0.001f)
+            val nx = dir.x / len
+            val ny = dir.y / len
+            val tail = Offset(pos.x - nx * p.length, pos.y - ny * p.length)
+            drawLine(
+                color = color,
+                start = pos,
+                end = tail,
+                strokeWidth = p.stroke,
+                cap = StrokeCap.Round
+            )
+        }
+        VolleyKind.DOT -> {
+            drawCircle(
+                color = color,
+                radius = p.stroke * 1.2f,
+                center = pos
+            )
+        }
+    }
+}
+
 private data class MeteorParticle(
     val start: Offset,
     val c1: Offset,
@@ -1045,6 +1324,8 @@ private fun TimelineList(
     onOpenDetails: (TodoTask) -> Unit,
     onEdit: (TodoTask) -> Unit,
     onDelete: (String) -> Unit,
+    onClearCompleted: () -> Unit,
+    showCompleted: Boolean,
     tagName: (String?) -> String?,
     noteCount: (TodoTask) -> Int,
     onOpenNotes: (TodoTask) -> Unit,
@@ -1053,7 +1334,7 @@ private fun TimelineList(
 ) {
     val grouped = remember(tasks) {
         tasks.groupBy { t ->
-            val now = Clock.System.now()
+            val now = nowInstant()
             val planned = t.plannedAt
             val deadline = t.deadline
             if (planned != null && planned < now) {
@@ -1085,18 +1366,27 @@ private fun TimelineList(
                     )
                 }
                 items(v, key = { it.id }) { t ->
-                    TaskCard(
-                        task = t,
-                        tagLabel = tagName(t.tagId),
-                        noteCount = noteCount(t),
-                        backdrop = backdrop,
-                        onOpenNotes = { onOpenNotes(t) },
-                        onToggleDone = { onToggleDone(t.id) },
-                        onToggleSub = { subId -> onToggleSub(t.id, subId) },
-                        onOpenDetails = { onOpenDetails(t) },
-                        onEdit = { onEdit(t) },
-                        onDelete = { onDelete(t.id) }
-                    )
+                    Box(Modifier.itemPlacement()) {
+                        AnimatedVisibility(
+                            visible = showCompleted || !t.done,
+                            enter = fadeIn(tween(160)),
+                            exit = shrinkVertically(tween(320)) + fadeOut(tween(260))
+                        ) {
+                            TaskCard(
+                                task = t,
+                                tagLabel = tagName(t.tagId),
+                                noteCount = noteCount(t),
+                                backdrop = backdrop,
+                                onOpenNotes = { onOpenNotes(t) },
+                                onToggleDone = { onToggleDone(t.id) },
+                                onToggleSub = { subId -> onToggleSub(t.id, subId) },
+                                onOpenDetails = { onOpenDetails(t) },
+                                onEdit = { onEdit(t) },
+                                onDelete = { onDelete(t.id) },
+                                onClearCompleted = onClearCompleted
+                            )
+                        }
+                    }
                 }
             }
             item { Spacer(Modifier.height(120.dp)) }
@@ -1117,6 +1407,8 @@ private fun FlatList(
     onOpenDetails: (TodoTask) -> Unit,
     onEdit: (TodoTask) -> Unit,
     onDelete: (String) -> Unit,
+    onClearCompleted: () -> Unit,
+    showCompleted: Boolean,
     tagName: (String?) -> String?,
     noteCount: (TodoTask) -> Int,
     onOpenNotes: (TodoTask) -> Unit,
@@ -1131,18 +1423,27 @@ private fun FlatList(
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             items(tasks, key = { it.id }) { t ->
-                TaskCard(
-                    task = t,
-                    tagLabel = tagName(t.tagId),
-                    noteCount = noteCount(t),
-                    backdrop = backdrop,
-                    onOpenNotes = { onOpenNotes(t) },
-                    onToggleDone = { onToggleDone(t.id) },
-                    onToggleSub = { subId -> onToggleSub(t.id, subId) },
-                    onOpenDetails = { onOpenDetails(t) },
-                    onEdit = { onEdit(t) },
-                    onDelete = { onDelete(t.id) }
-                )
+                Box(Modifier.itemPlacement()) {
+                    AnimatedVisibility(
+                        visible = showCompleted || !t.done,
+                        enter = fadeIn(tween(160)),
+                        exit = shrinkVertically(tween(320)) + fadeOut(tween(260))
+                    ) {
+                        TaskCard(
+                            task = t,
+                            tagLabel = tagName(t.tagId),
+                            noteCount = noteCount(t),
+                            backdrop = backdrop,
+                            onOpenNotes = { onOpenNotes(t) },
+                            onToggleDone = { onToggleDone(t.id) },
+                            onToggleSub = { subId -> onToggleSub(t.id, subId) },
+                            onOpenDetails = { onOpenDetails(t) },
+                            onEdit = { onEdit(t) },
+                            onDelete = { onDelete(t.id) },
+                            onClearCompleted = onClearCompleted
+                        )
+                    }
+                }
             }
             item { Spacer(Modifier.height(120.dp)) }
         }

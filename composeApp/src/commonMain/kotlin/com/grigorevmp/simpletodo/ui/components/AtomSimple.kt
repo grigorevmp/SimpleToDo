@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -40,7 +41,7 @@ fun AtomSimpleIcon(
         val stroke = r * 0.08f
 
         repeat(3) { i ->
-            val angle = Math.toRadians((t + i * 60f).toDouble())
+            val angle = (t + i * 60f) * (PI / 180f)
             val dx = orbitRadius * 0.7f * cos(angle).toFloat()
             val dy = orbitRadius * sin(angle).toFloat()
             drawOval(

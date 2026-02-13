@@ -17,17 +17,19 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.compose.animation.Crossfade
 import com.grigorevmp.simpletodo.di.AppComponent
 import com.grigorevmp.simpletodo.model.ThemeMode
 import com.grigorevmp.simpletodo.ui.components.AppTab
 import com.grigorevmp.simpletodo.ui.components.CreateAction
-import com.grigorevmp.simpletodo.ui.components.FloatingNavBar
+import com.grigorevmp.simpletodo.ui.components.PlatformBottomBar
 import com.grigorevmp.simpletodo.ui.components.AddIcon
 import com.grigorevmp.simpletodo.ui.home.HomeScreen
 import com.grigorevmp.simpletodo.ui.notes.NotesScreen
 import com.grigorevmp.simpletodo.ui.settings.SettingsScreen
 import com.grigorevmp.simpletodo.ui.theme.DinoTheme
 import com.grigorevmp.simpletodo.platform.PlatformSystemBars
+import com.grigorevmp.simpletodo.platform.isIos
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 
@@ -61,7 +63,9 @@ fun App() {
         val navController = rememberNavController()
         val backStack by navController.currentBackStackEntryAsState()
         val currentRoute = backStack?.destination?.route ?: "home"
-        val tab = when (currentRoute) {
+        val iosRoute = remember { androidx.compose.runtime.mutableStateOf("home") }
+        val activeRoute = if (isIos) iosRoute.value else currentRoute
+        val tab = when (activeRoute) {
             "settings" -> AppTab.SETTINGS
             "notes" -> AppTab.NOTES
             else -> AppTab.HOME
@@ -88,45 +92,69 @@ fun App() {
                         .fillMaxSize()
                         .layerBackdrop(backdrop)
                 ) {
-                    NavHost(navController = navController, startDestination = "home") {
-                        composable("home") {
-                            HomeScreen(
-                                repo = component.repo,
-                                createSignal = createTaskSignal.intValue,
-                                onCreateHandled = { createTaskSignal.intValue = 0 },
-                                onEditNote = { noteId ->
-                                    openNoteId.value = noteId
-                                    if (currentRoute != "notes") {
-                                        navController.navigate("notes") { launchSingleTop = true }
+                    if (isIos) {
+                        Crossfade(targetState = activeRoute, label = "ios_nav_fade") { route ->
+                            when (route) {
+                                "notes" -> NotesScreen(
+                                    repo = component.repo,
+                                    createNoteSignal = createNoteSignal.intValue,
+                                    onCreateNoteHandled = { createNoteSignal.intValue = 0 },
+                                    openNoteId = openNoteId.value,
+                                    onOpenNoteHandled = { openNoteId.value = null }
+                                )
+                                "settings" -> SettingsScreen(component.repo)
+                                else -> HomeScreen(
+                                    repo = component.repo,
+                                    createSignal = createTaskSignal.intValue,
+                                    onCreateHandled = { createTaskSignal.intValue = 0 },
+                                    onEditNote = { noteId ->
+                                        openNoteId.value = noteId
+                                        iosRoute.value = "notes"
                                     }
-                                }
-                            )
+                                )
+                            }
                         }
-                        composable("notes") {
-                            NotesScreen(
-                                repo = component.repo,
-                                createNoteSignal = createNoteSignal.intValue,
-                                onCreateNoteHandled = { createNoteSignal.intValue = 0 },
-                                openNoteId = openNoteId.value,
-                                onOpenNoteHandled = { openNoteId.value = null }
-                            )
+                    } else {
+                        NavHost(navController = navController, startDestination = "home") {
+                            composable("home") {
+                                HomeScreen(
+                                    repo = component.repo,
+                                    createSignal = createTaskSignal.intValue,
+                                    onCreateHandled = { createTaskSignal.intValue = 0 },
+                                    onEditNote = { noteId ->
+                                        openNoteId.value = noteId
+                                        if (currentRoute != "notes") {
+                                            navController.navigate("notes") { launchSingleTop = true }
+                                        }
+                                    }
+                                )
+                            }
+                            composable("notes") {
+                                NotesScreen(
+                                    repo = component.repo,
+                                    createNoteSignal = createNoteSignal.intValue,
+                                    onCreateNoteHandled = { createNoteSignal.intValue = 0 },
+                                    openNoteId = openNoteId.value,
+                                    onOpenNoteHandled = { openNoteId.value = null }
+                                )
+                            }
+                            composable("settings") { SettingsScreen(component.repo) }
                         }
-                        composable("settings") { SettingsScreen(component.repo) }
                     }
                 }
 
-                    FloatingNavBar(
+                    PlatformBottomBar(
                         tab = tab,
                         onTab = { target ->
-                        val route = when (target) {
-                            AppTab.HOME -> "home"
+                            val route = when (target) {
+                                AppTab.HOME -> "home"
                             AppTab.NOTES -> "notes"
                             AppTab.SETTINGS -> "settings"
                         }
-                        if (currentRoute != route) {
-                            navController.navigate(route) {
-                                launchSingleTop = true
-                            }
+                        if (isIos) {
+                            iosRoute.value = route
+                        } else if (currentRoute != route) {
+                            navController.navigate(route) { launchSingleTop = true }
                         }
                     },
                     createActions = when (tab) {
@@ -137,7 +165,9 @@ fun App() {
                                 contentDescription = "Create task",
                                 icon = AddIcon,
                                 onClick = {
-                                    if (currentRoute != "home") {
+                                    if (isIos) {
+                                        iosRoute.value = "home"
+                                    } else if (currentRoute != "home") {
                                         navController.navigate("home") { launchSingleTop = true }
                                     }
                                     createTaskSignal.intValue += 1
@@ -151,7 +181,9 @@ fun App() {
                                 contentDescription = "Create note",
                                 icon = AddIcon,
                                 onClick = {
-                                    if (currentRoute != "notes") {
+                                    if (isIos) {
+                                        iosRoute.value = "notes"
+                                    } else if (currentRoute != "notes") {
                                         navController.navigate("notes") { launchSingleTop = true }
                                     }
                                     createNoteSignal.intValue += 1
@@ -160,7 +192,7 @@ fun App() {
                         )
                         AppTab.SETTINGS -> emptyList()
                     },
-                    enableEffects = prefs.liquidGlass,
+                    enableEffects = prefs.liquidGlass && !isIos,
                     backdrop = backdrop,
                     modifier = Modifier
                         .align(Alignment.BottomCenter)

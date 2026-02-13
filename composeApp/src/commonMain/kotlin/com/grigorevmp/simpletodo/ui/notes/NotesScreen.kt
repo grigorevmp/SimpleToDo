@@ -53,9 +53,12 @@ import com.grigorevmp.simpletodo.model.Note
 import com.grigorevmp.simpletodo.model.NoteFolder
 import com.grigorevmp.simpletodo.model.NoteSortField
 import com.grigorevmp.simpletodo.ui.components.FadingScrollEdges
-import com.grigorevmp.simpletodo.ui.components.FilterIcon
+import com.grigorevmp.simpletodo.ui.components.AppIconId
+import com.grigorevmp.simpletodo.ui.components.PlatformIcon
+import androidx.compose.material3.LocalContentColor
 import com.grigorevmp.simpletodo.ui.components.FolderIcon
 import com.grigorevmp.simpletodo.ui.components.NoteIcon
+import com.grigorevmp.simpletodo.platform.isIos
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.kyant.backdrop.drawBackdrop
@@ -230,7 +233,7 @@ fun NotesScreen(
                     newFolderName = ""
                     showFolderInput = true
                 },
-                enableEffects = true,
+                enableEffects = prefs.liquidGlass && !isIos,
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .padding(bottom = 96.dp)
@@ -243,7 +246,7 @@ fun NotesScreen(
                         val parent = path.dropLast(1).lastOrNull()?.id
                         currentFolderId = parent
                     },
-                    enableEffects = true,
+                    enableEffects = prefs.liquidGlass && !isIos,
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
                         .padding(end = 16.dp, bottom = 96.dp)
@@ -336,9 +339,11 @@ private fun NotesTopBar(path: List<NoteFolder>, onSort: () -> Unit) {
     ) {
         Text(title, style = MaterialTheme.typography.titleLarge)
         IconButton(onClick = onSort) {
-            Icon(
-                imageVector = FilterIcon,
-                contentDescription = "Filter"
+            PlatformIcon(
+                id = AppIconId.Filter,
+                contentDescription = "Filter",
+                tint = LocalContentColor.current,
+                modifier = Modifier.size(22.dp)
             )
         }
     }

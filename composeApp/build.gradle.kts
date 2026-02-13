@@ -50,6 +50,9 @@ kotlin {
             implementation(libs.jetbrains.navigation.compose)
             implementation(libs.backdrop)
         }
+        iosMain.dependencies {
+            // No extra deps for Settings on iOS.
+        }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
         }

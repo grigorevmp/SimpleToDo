@@ -4,71 +4,87 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.interop.UIKitView
 import androidx.compose.ui.unit.dp
+import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.datetime.Instant
-import kotlinx.datetime.LocalDateTime
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toInstant
-import kotlinx.datetime.toLocalDateTime
+import platform.Foundation.NSDate
+import platform.UIKit.UIDatePicker
 
+@OptIn(ExperimentalForeignApi::class)
 @Composable
 actual fun PlatformDateTimePicker(
     current: Instant?,
     onPicked: (Instant?) -> Unit
 ) {
-    val tz = TimeZone.currentSystemDefault()
-    var text by remember {
-        mutableStateOf(
-            current?.toLocalDateTime(tz)?.let { l ->
-                "${l.year}-${l.monthNumber.toString().padStart(2, '0')}-${l.dayOfMonth.toString().padStart(2, '0')} " +
-                    "${l.hour.toString().padStart(2, '0')}:${l.minute.toString().padStart(2, '0')}"
-            } ?: ""
-        )
+    var selected by remember { mutableStateOf(current) }
+    var pickerRef by remember { mutableStateOf<UIDatePicker?>(null) }
+
+    LaunchedEffect(current) {
+        selected = current
     }
 
     Column(modifier = Modifier.fillMaxWidth()) {
-        OutlinedTextField(
-            value = text,
-            onValueChange = { text = it },
-            label = { Text("YYYY-MM-DD HH:MM") },
-            modifier = Modifier.fillMaxWidth()
+        UIKitView(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp),
+            factory = {
+                UIDatePicker().apply {
+                    selected?.let { setDate(it.toNSDate(), animated = false) }
+                    pickerRef = this
+                }
+            },
+            update = { picker ->
+                pickerRef = picker
+                val targetDate = selected?.toNSDate()
+                if (targetDate != null) {
+                    picker.setDate(targetDate, animated = false)
+                }
+            }
         )
-        Row(modifier = Modifier.padding(top = 4.dp)) {
-            OutlinedButton(onClick = {
-                val parsed = parse(text)
-                onPicked(parsed?.toInstant(tz))
-            }) { Text("Apply") }
+
+        Row(modifier = Modifier.padding(top = 6.dp)) {
+            TextButton(
+                onClick = {
+                    val picked = pickerRef?.date?.toInstant()
+                    selected = picked
+                    onPicked(picked)
+                }
+            ) {
+                Text("Apply")
+            }
 
             TextButton(
-                onClick = { text = ""; onPicked(null) },
-                enabled = current != null
-            ) { Text("Clear") }
+                onClick = {
+                    selected = null
+                    onPicked(null)
+                },
+                enabled = selected != null
+            ) {
+                Text("Clear")
+            }
         }
     }
 }
 
-private fun parse(s: String): LocalDateTime? {
-    val t = s.trim()
-    if (t.isEmpty()) return null
-    val parts = t.split(" ")
-    if (parts.size != 2) return null
-    val date = parts[0].split("-")
-    val time = parts[1].split(":")
-    if (date.size != 3 || time.size != 2) return null
-    val y = date[0].toIntOrNull() ?: return null
-    val m = date[1].toIntOrNull() ?: return null
-    val d = date[2].toIntOrNull() ?: return null
-    val hh = time[0].toIntOrNull() ?: return null
-    val mm = time[1].toIntOrNull() ?: return null
-    return runCatching { LocalDateTime(y, m, d, hh, mm) }.getOrNull()
+private fun Instant.toNSDate(): NSDate {
+    val seconds = this.toEpochMilliseconds() / 1000.0
+    return NSDate(timeIntervalSinceReferenceDate = seconds - NSTimeIntervalSince1970)
 }
+
+private fun NSDate.toInstant(): Instant {
+    val seconds = this.timeIntervalSinceReferenceDate + NSTimeIntervalSince1970
+    return Instant.fromEpochMilliseconds((seconds * 1000.0).toLong())
+}
+
+private const val NSTimeIntervalSince1970 = 978307200.0

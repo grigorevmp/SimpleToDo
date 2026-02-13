@@ -95,6 +95,7 @@ data class AppPrefs(
     val sort: SortConfig = SortConfig(),
     val noteSort: NoteSortConfig = NoteSortConfig(),
     val showTagFilters: Boolean = false,
+    val showCompletedTasks: Boolean = false,
     val dimScroll: Boolean = true,
     val liquidGlass: Boolean = true,
     val disableDarkTheme: Boolean = false,

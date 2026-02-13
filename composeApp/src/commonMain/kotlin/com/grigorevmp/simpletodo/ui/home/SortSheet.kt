@@ -16,6 +16,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -33,6 +34,8 @@ import com.grigorevmp.simpletodo.model.SortField
 @Composable
 fun SortSheet(
     current: SortConfig,
+    showCompleted: Boolean,
+    onShowCompleted: (Boolean) -> Unit,
     onApply: (SortConfig) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -72,6 +75,29 @@ fun SortSheet(
                 onField = { secondary = it },
                 onDir = { secondaryDir = it }
             )
+
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
+            ) {
+                Row(
+                    Modifier.fillMaxWidth().padding(14.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text("Show completed", style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            "Toggle visibility of done tasks",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Switch(
+                        checked = showCompleted,
+                        onCheckedChange = onShowCompleted
+                    )
+                }
+            }
 
             Button(
                 onClick = {

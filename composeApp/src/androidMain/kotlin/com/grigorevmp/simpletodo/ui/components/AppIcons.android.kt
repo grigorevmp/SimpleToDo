@@ -5,7 +5,10 @@ import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.FilterList
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.outlined.Tag
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -18,3 +21,6 @@ actual val TagIcon: ImageVector = Icons.Outlined.Tag
 actual val EditIcon: ImageVector = Icons.Outlined.Edit
 actual val FolderIcon: ImageVector = Icons.Outlined.Folder
 actual val NoteIcon: ImageVector = Icons.Filled.Description
+actual val FlameIcon: ImageVector = Icons.Filled.LocalFireDepartment
+actual val VisibilityIcon: ImageVector = Icons.Filled.Visibility
+actual val VisibilityOffIcon: ImageVector = Icons.Filled.VisibilityOff

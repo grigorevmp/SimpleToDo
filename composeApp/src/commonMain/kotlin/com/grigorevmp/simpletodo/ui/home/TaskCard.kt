@@ -24,11 +24,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material.icons.filled.Whatshot
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -50,19 +45,26 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import com.grigorevmp.simpletodo.model.Importance
 import com.grigorevmp.simpletodo.model.TodoTask
 import com.grigorevmp.simpletodo.ui.components.DeleteIcon
 import com.grigorevmp.simpletodo.ui.components.EditIcon
 import com.grigorevmp.simpletodo.ui.components.NoteIcon
-import com.grigorevmp.simpletodo.ui.components.TagIcon
+import com.grigorevmp.simpletodo.ui.components.AppIconId
+import com.grigorevmp.simpletodo.ui.components.PlatformIcon
+import com.grigorevmp.simpletodo.ui.components.FlameIcon
+import com.grigorevmp.simpletodo.ui.components.SimpleIcons
+import com.grigorevmp.simpletodo.ui.components.CircleCheckbox
 import com.grigorevmp.simpletodo.util.formatDeadline
+import com.grigorevmp.simpletodo.util.nowInstant
 import com.kyant.backdrop.backdrops.LayerBackdrop
 import com.kyant.backdrop.drawBackdrop
 import com.kyant.backdrop.effects.blur
 import com.kyant.backdrop.effects.lens
 import com.kyant.backdrop.effects.vibrancy
-import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -78,7 +80,9 @@ fun TaskCard(
     onToggleSub: (String) -> Unit,
     onOpenDetails: () -> Unit,
     onEdit: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onClearCompleted: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     var subtasksExpanded by remember(task.id) { mutableStateOf(false) }
     var showActions by remember(task.id) { mutableStateOf(false) }
@@ -113,7 +117,7 @@ fun TaskCard(
         "Подзадачи"
     }
 
-    Box(Modifier.fillMaxWidth()) {
+    Box(modifier.fillMaxWidth()) {
         ImportanceFlameBackdrop(
             importance = task.importance,
             modifier = Modifier
@@ -156,9 +160,14 @@ fun TaskCard(
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(
+                    CircleCheckbox(
                         checked = task.done,
-                        onCheckedChange = { onToggleDone() }
+                        onCheckedChange = { checked ->
+                            if (!task.done && checked) {
+                            }
+                            onToggleDone()
+                        },
+                        onTapOffset = null
                     )
                     Spacer(Modifier.width(8.dp))
 
@@ -192,7 +201,11 @@ fun TaskCard(
                                 Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Icon(TagIcon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                PlatformIcon(
+                                    id = AppIconId.Tag,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
                                 Spacer(Modifier.width(6.dp))
                                 Text(tagLabel, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
                             }
@@ -238,7 +251,7 @@ fun TaskCard(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(
-                                if (subtasksExpanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
+                                if (subtasksExpanded) SimpleIcons.ArrowUp else SimpleIcons.ArrowDown,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.primary
                             )
@@ -295,6 +308,16 @@ fun TaskCard(
                             onDelete()
                         }
                     )
+                    if (task.done) {
+                        DropdownMenuItem(
+                            text = { Text("Очистить все выполненные", style = MaterialTheme.typography.titleMedium) },
+                            leadingIcon = { Icon(DeleteIcon, contentDescription = null) },
+                            onClick = {
+                                showActions = false
+                                onClearCompleted()
+                            }
+                        )
+                    }
                 }
             }
         }
@@ -321,7 +344,7 @@ private fun SubTaskCard(
                     Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Checkbox(
+                    CircleCheckbox(
                         checked = s.done,
                         onCheckedChange = { onToggleSub(s.id) }
                     )
@@ -377,7 +400,7 @@ private fun StatusBanner(text: String, color: androidx.compose.ui.graphics.Color
 }
 
 private fun daysUntil(deadline: Instant): Int {
-    val now = Clock.System.now()
+    val now = nowInstant()
     val diffMs = deadline.toEpochMilliseconds() - now.toEpochMilliseconds()
     val dayMs = 24 * 60 * 60 * 1000L
     val days = ((diffMs + dayMs - 1) / dayMs).toInt()
@@ -385,7 +408,7 @@ private fun daysUntil(deadline: Instant): Int {
 }
 
 private fun deadlineLabel(deadline: Instant): String {
-    val now = Clock.System.now()
+    val now = nowInstant()
     if (deadline < now) return "Дедлайн истек"
     val days = daysUntil(deadline)
     return when (days) {
@@ -425,7 +448,7 @@ private fun ImportanceFlameBackdrop(importance: Importance, modifier: Modifier =
         positions.forEachIndexed { index, (x, y) ->
             val size = sizes[index.coerceAtMost(sizes.lastIndex)]
             Icon(
-                imageVector = Icons.Filled.Whatshot,
+                imageVector = FlameIcon,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
                 modifier = Modifier
@@ -443,8 +466,8 @@ private fun flamePositions(count: Int): List<Pair<Float, Float>> {
         0.68f to 0.10f,
         0.18f to 0.52f,
         0.62f to 0.48f,
-        0.10f to 0.78f,
-        0.72f to 0.76f
+        0.10f to 0.70f,
+        0.72f to 0.68f
     )
     return all.take(count)
 }
@@ -458,7 +481,7 @@ fun SubTaskPreview() {
             title = "Z",
             plan = "Z",
             subtasks = emptyList(),
-            createdAt = Clock.System.now(),
+            createdAt = nowInstant(),
             importance = Importance.NORMAL
         ),
         { }

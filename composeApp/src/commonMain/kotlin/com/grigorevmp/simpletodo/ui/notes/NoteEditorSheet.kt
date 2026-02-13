@@ -3,7 +3,6 @@ package com.grigorevmp.simpletodo.ui.notes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.LocalOverscrollConfiguration
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,10 +17,6 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Save
-import androidx.compose.material.icons.outlined.Visibility
-import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -32,7 +27,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -50,6 +44,10 @@ import com.grigorevmp.simpletodo.model.Note
 import com.grigorevmp.simpletodo.model.TodoTask
 import com.grigorevmp.simpletodo.ui.components.CloseIcon
 import com.grigorevmp.simpletodo.ui.components.FadingScrollEdges
+import com.grigorevmp.simpletodo.ui.components.NoOverscroll
+import com.grigorevmp.simpletodo.ui.components.VisibilityIcon
+import com.grigorevmp.simpletodo.ui.components.VisibilityOffIcon
+import com.grigorevmp.simpletodo.ui.components.SimpleIcons
 import com.grigorevmp.simpletodo.ui.notes.create.MarkdownToolbar
 import com.grigorevmp.simpletodo.ui.notes.create.TaskLinkPicker
 import kotlinx.coroutines.launch
@@ -118,7 +116,7 @@ fun NoteEditorScreen(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         IconButton(onClick = { preview = !preview }) {
                             Icon(
-                                if (preview) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
+                                if (preview) VisibilityOffIcon else VisibilityIcon,
                                 contentDescription = if (preview) "Edit mode" else "Preview mode"
                             )
                         }
@@ -128,9 +126,7 @@ fun NoteEditorScreen(
                     }
                 }
 
-                CompositionLocalProvider(
-                    LocalOverscrollConfiguration provides null
-                ) {
+                NoOverscroll {
                     Box(
                         Modifier.fillMaxWidth().weight(1f)
                     ) {
@@ -231,7 +227,7 @@ fun NoteEditorScreen(
                     containerColor = MaterialTheme.colorScheme.primary
                 ) {
                     Icon(
-                        Icons.Outlined.Save,
+                        SimpleIcons.Save,
                         contentDescription = "Save",
                         tint = MaterialTheme.colorScheme.onPrimary
                     )

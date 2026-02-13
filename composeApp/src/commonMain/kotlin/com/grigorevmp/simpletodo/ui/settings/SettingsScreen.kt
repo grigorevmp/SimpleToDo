@@ -30,8 +30,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -54,6 +52,7 @@ import com.grigorevmp.simpletodo.model.ThemeMode
 import com.grigorevmp.simpletodo.platform.NotificationPermissionGate
 import com.grigorevmp.simpletodo.ui.components.FadingScrollEdges
 import com.grigorevmp.simpletodo.ui.theme.authorAccentColors
+import com.grigorevmp.simpletodo.ui.components.SimpleIcons
 import kotlinx.coroutines.launch
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -415,7 +414,7 @@ private fun RowScope.ThemeCard(
                 ) {
                     if (selected) {
                         Icon(
-                            Icons.Filled.Check,
+                            SimpleIcons.Check,
                             contentDescription = "Selected",
                             tint = MaterialTheme.colorScheme.onPrimary,
                             modifier = Modifier.padding(2.dp)

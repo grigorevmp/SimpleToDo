@@ -15,14 +15,13 @@ import com.grigorevmp.simpletodo.model.ThemeMode
 import com.grigorevmp.simpletodo.model.TodoTask
 import com.grigorevmp.simpletodo.platform.NotificationScheduler
 import com.grigorevmp.simpletodo.util.newId
+import com.grigorevmp.simpletodo.util.nowInstant
 import com.russhwolf.settings.Settings
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
-import kotlinx.datetime.serializers.InstantIso8601Serializer
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.modules.SerializersModule
@@ -36,7 +35,7 @@ class TodoRepository(
         ignoreUnknownKeys = true
         encodeDefaults = true
         serializersModule = SerializersModule {
-            contextual(Instant::class, InstantIso8601Serializer)
+            contextual(Instant::class, InstantAsStringSerializer)
         }
     }
 
@@ -140,7 +139,7 @@ class TodoRepository(
         subtasks: List<Subtask>
     ) {
         mutex.withLock {
-            val now = Clock.System.now()
+            val now = nowInstant()
             val task = TodoTask(
                 id = newId("task"),
                 title = title.trim(),
@@ -226,7 +225,7 @@ class TodoRepository(
         folderId: String?
     ) {
         mutex.withLock {
-            val now = Clock.System.now()
+            val now = nowInstant()
             val note = Note(
                 id = newId("note"),
                 title = title.trim(),
@@ -252,7 +251,7 @@ class TodoRepository(
             val updated = note.copy(
                 title = note.title.trim(),
                 content = note.content,
-                updatedAt = Clock.System.now()
+                updatedAt = nowInstant()
             )
             val newList = _notes.value.map { if (it.id == note.id) updated else it }
             _notes.value = newList
@@ -279,7 +278,7 @@ class TodoRepository(
         mutex.withLock {
             val trimmed = name.trim()
             if (trimmed.isEmpty()) return
-            val now = Clock.System.now()
+            val now = nowInstant()
             val folder = NoteFolder(
                 id = newId("folder"),
                 name = trimmed,
@@ -347,6 +346,14 @@ class TodoRepository(
     suspend fun setShowTagFilters(show: Boolean) {
         mutex.withLock {
             val p = _prefs.value.copy(showTagFilters = show)
+            _prefs.value = p
+            savePrefs(p)
+        }
+    }
+
+    suspend fun setShowCompletedTasks(show: Boolean) {
+        mutex.withLock {
+            val p = _prefs.value.copy(showCompletedTasks = show)
             _prefs.value = p
             savePrefs(p)
         }
@@ -443,6 +450,18 @@ class TodoRepository(
         }
     }
 
+    suspend fun clearCompletedTasks() {
+        mutex.withLock {
+            val doneIds = _tasks.value.filter { it.done }.map { it.id }.toSet()
+            if (doneIds.isEmpty()) return
+            doneIds.forEach { scheduler.cancel(it) }
+            val updated = _tasks.value.filterNot { it.id in doneIds }
+            _tasks.value = updated
+            saveTasks(updated)
+            removeLinksForTasks(doneIds)
+        }
+    }
+
     fun sortedTasks(tasks: List<TodoTask>, prefs: AppPrefs): List<TodoTask> {
         val sort = prefs.sort
         val cmp = compareBy<TodoTask> { sortKey(it, sort.primary) }
@@ -513,6 +532,13 @@ class TodoRepository(
 
     private fun removeLinksForTask(taskId: String) {
         val updated = _taskNoteLinks.value.filterNot { it.taskId == taskId }
+        if (updated.size == _taskNoteLinks.value.size) return
+        _taskNoteLinks.value = updated
+        saveLinks(updated)
+    }
+
+    private fun removeLinksForTasks(taskIds: Set<String>) {
+        val updated = _taskNoteLinks.value.filterNot { it.taskId in taskIds }
         if (updated.size == _taskNoteLinks.value.size) return
         _taskNoteLinks.value = updated
         saveLinks(updated)

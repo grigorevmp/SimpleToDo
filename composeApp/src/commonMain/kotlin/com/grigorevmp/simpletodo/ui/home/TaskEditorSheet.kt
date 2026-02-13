@@ -6,7 +6,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.LocalOverscrollConfiguration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -31,7 +30,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AlertDialogDefaults
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Button
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -48,7 +46,6 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -71,9 +68,11 @@ import com.grigorevmp.simpletodo.model.Tag
 import com.grigorevmp.simpletodo.model.TodoTask
 import com.grigorevmp.simpletodo.platform.PlatformDateTimePicker
 import com.grigorevmp.simpletodo.ui.components.AddIcon
+import com.grigorevmp.simpletodo.ui.components.CircleCheckbox
 import com.grigorevmp.simpletodo.ui.components.CloseIcon
 import com.grigorevmp.simpletodo.ui.components.DeleteIcon
 import com.grigorevmp.simpletodo.ui.components.FadingScrollEdges
+import com.grigorevmp.simpletodo.ui.components.NoOverscroll
 import com.grigorevmp.simpletodo.util.newId
 import kotlinx.coroutines.launch
 
@@ -113,9 +112,7 @@ fun TaskEditorSheet(
             Modifier.fillMaxWidth().imePadding()
         ) {
             Column(Modifier.fillMaxSize()) {
-                CompositionLocalProvider(
-                    LocalOverscrollConfiguration provides null
-                ) {
+                NoOverscroll {
                     Box(
                         Modifier
                             .fillMaxWidth()
@@ -222,10 +219,19 @@ fun TaskEditorSheet(
 
                                     Spacer(modifier = Modifier.height(8.dp))
                                     Text("Subtasks", style = MaterialTheme.typography.titleMedium)
-                                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .heightIn(max = 240.dp)
+                                            .verticalScroll(rememberScrollState()),
+                                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                                    ) {
                                         subtasks.forEachIndexed { idx, s ->
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                Checkbox(
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                modifier = Modifier.padding(vertical = 2.dp)
+                                            ) {
+                                                CircleCheckbox(
                                                     checked = s.done, onCheckedChange = {
                                                         subtasks = subtasks.map {
                                                             if (it.id == s.id) it.copy(done = !it.done) else it

@@ -3,6 +3,8 @@ package com.grigorevmp.simpletodo.ui.components
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.unit.dp
@@ -15,7 +17,11 @@ actual val CloseIcon: ImageVector = ImageVector.Builder(
     viewportHeight = 24f
 ).apply {
     path(
-        fill = SolidColor(Color.Black),
+        fill = SolidColor(Color.Transparent),
+        stroke = SolidColor(Color.Black),
+        strokeLineWidth = 2.2f,
+        strokeLineCap = StrokeCap.Round,
+        strokeLineJoin = StrokeJoin.Round,
         pathFillType = PathFillType.NonZero
     ) {
         moveTo(6f, 6f)
@@ -33,7 +39,11 @@ actual val AddIcon: ImageVector = ImageVector.Builder(
     viewportHeight = 24f
 ).apply {
     path(
-        fill = SolidColor(Color.Black),
+        fill = SolidColor(Color.Transparent),
+        stroke = SolidColor(Color.Black),
+        strokeLineWidth = 2.2f,
+        strokeLineCap = StrokeCap.Round,
+        strokeLineJoin = StrokeJoin.Round,
         pathFillType = PathFillType.NonZero
     ) {
         moveTo(12f, 5f)

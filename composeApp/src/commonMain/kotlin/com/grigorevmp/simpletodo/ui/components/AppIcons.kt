@@ -10,3 +10,6 @@ expect val TagIcon: ImageVector
 expect val EditIcon: ImageVector
 expect val FolderIcon: ImageVector
 expect val NoteIcon: ImageVector
+expect val FlameIcon: ImageVector
+expect val VisibilityIcon: ImageVector
+expect val VisibilityOffIcon: ImageVector
