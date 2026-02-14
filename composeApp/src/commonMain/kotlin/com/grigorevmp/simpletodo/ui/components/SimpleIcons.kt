@@ -112,6 +112,29 @@ object SimpleIcons {
         }
     }.build()
 
+    val Star: ImageVector = ImageVector.Builder(
+        name = "Star",
+        defaultWidth = 24.dp,
+        defaultHeight = 24.dp,
+        viewportWidth = 24f,
+        viewportHeight = 24f
+    ).apply {
+        path(fill = SolidColor(Color.Black), pathFillType = PathFillType.NonZero) {
+            moveTo(12f, 3.5f)
+            lineTo(14.9f, 9f)
+            lineTo(21f, 9.8f)
+            lineTo(16.5f, 14f)
+            lineTo(17.8f, 20f)
+            lineTo(12f, 16.9f)
+            lineTo(6.2f, 20f)
+            lineTo(7.5f, 14f)
+            lineTo(3f, 9.8f)
+            lineTo(9.1f, 9f)
+            close()
+        }
+    }.build()
+
+
     val Save: ImageVector = ImageVector.Builder(
         name = "Save",
         defaultWidth = 24.dp,

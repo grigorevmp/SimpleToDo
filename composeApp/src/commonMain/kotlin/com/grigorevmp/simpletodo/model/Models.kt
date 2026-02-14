@@ -36,6 +36,7 @@ data class Note(
     val content: String,
     val taskId: String? = null,
     val folderId: String? = null,
+    val favorite: Boolean = false,
     @Contextual val createdAt: Instant,
     @Contextual val updatedAt: Instant
 )
@@ -72,8 +73,8 @@ enum class SortDir { ASC, DESC }
 data class SortConfig(
     val primary: SortField = SortField.PLANNED_AT,
     val primaryDir: SortDir = SortDir.ASC,
-    val secondary: SortField = SortField.IMPORTANCE,
-    val secondaryDir: SortDir = SortDir.DESC
+    val secondary: SortField = SortField.DEADLINE,
+    val secondaryDir: SortDir = SortDir.ASC
 )
 
 @Serializable

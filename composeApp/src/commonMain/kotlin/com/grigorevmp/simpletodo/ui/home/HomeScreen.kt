@@ -115,6 +115,7 @@ fun HomeScreen(
 
     val sorted = remember(tasks, prefs) { repo.sortedTasks(tasks, prefs) }
     val notesById = remember(notes) { notes.associateBy { it.id } }
+    val favoriteNotes = remember(notes) { notes.filter { it.favorite }.sortedByDescending { it.updatedAt } }
 
     var showEditor by remember { mutableStateOf(false) }
     var editTask by remember { mutableStateOf<TodoTask?>(null) }
@@ -197,7 +198,7 @@ fun HomeScreen(
                 ) { target ->
                     when (target) {
                         HomeTab.TIMELINE -> {
-                            if (timelineTasks.isEmpty()) {
+                            if (timelineTasks.isEmpty() && favoriteNotes.isEmpty()) {
                                 EmptyState(
                                     "No timeline tasks.",
                                     "Add a task with a deadline to see it on the timeline.",
@@ -206,6 +207,7 @@ fun HomeScreen(
                             } else {
                                     TimelineList(
                                         tasks = timelineTasks,
+                                        favoriteNotes = favoriteNotes,
                                         onToggleDone = { id ->
                                             val t = tasks.firstOrNull { it.id == id }
                                             if (t != null && !t.done) {
@@ -235,13 +237,14 @@ fun HomeScreen(
                                         }
                                     },
                                     dimScroll = prefs.dimScroll,
-                                    backdrop = listBackdrop
+                                    backdrop = listBackdrop,
+                                    onOpenFavorite = { note -> previewNote = note }
                                 )
                             }
                         }
 
                         HomeTab.INBOX -> {
-                            if (inboxTasks.isEmpty()) {
+                            if (inboxTasks.isEmpty() && favoriteNotes.isEmpty()) {
                                 EmptyState(
                                     "Inbox is empty.",
                                     "Tasks without deadlines appear here.",
@@ -250,6 +253,7 @@ fun HomeScreen(
                             } else {
                                     FlatList(
                                         tasks = inboxTasks,
+                                        favoriteNotes = favoriteNotes,
                                         onToggleDone = { id ->
                                             val t = tasks.firstOrNull { it.id == id }
                                             if (t != null && !t.done) {
@@ -279,7 +283,8 @@ fun HomeScreen(
                                         }
                                     },
                                     dimScroll = prefs.dimScroll,
-                                    backdrop = listBackdrop
+                                    backdrop = listBackdrop,
+                                    onOpenFavorite = { note -> previewNote = note }
                                 )
                             }
                         }
@@ -1333,8 +1338,60 @@ private fun cubicBezierTangent(p0: Offset, p1: Offset, p2: Offset, p3: Offset, t
 }
 
 @Composable
+private fun FavoriteNotesSection(
+    notes: List<Note>,
+    onOpen: (Note) -> Unit
+) {
+    Column(Modifier.fillMaxWidth()) {
+        Text(
+            "Favorite notes",
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(start = 4.dp, bottom = 6.dp)
+        )
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            notes.forEach { note ->
+                Surface(
+                    shape = MaterialTheme.shapes.large,
+                    color = MaterialTheme.colorScheme.surface,
+                    tonalElevation = 2.dp,
+                    modifier = Modifier
+                        .width(220.dp)
+                        .clickable { onOpen(note) }
+                ) {
+                    Column(
+                        Modifier.padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            note.title.ifBlank { "Untitled" },
+                            style = MaterialTheme.typography.titleMedium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            notePreview(note),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 3,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun TimelineList(
     tasks: List<TodoTask>,
+    favoriteNotes: List<Note>,
     onToggleDone: (String) -> Unit,
     onToggleSub: (String, String) -> Unit,
     onOpenDetails: (TodoTask) -> Unit,
@@ -1346,14 +1403,17 @@ private fun TimelineList(
     noteCount: (TodoTask) -> Int,
     onOpenNotes: (TodoTask) -> Unit,
     dimScroll: Boolean,
-    backdrop: com.kyant.backdrop.backdrops.LayerBackdrop
+    backdrop: com.kyant.backdrop.backdrops.LayerBackdrop,
+    onOpenFavorite: (Note) -> Unit
 ) {
     val grouped = remember(tasks) {
         tasks.groupBy { t ->
             val now = nowInstant()
             val planned = t.plannedAt
             val deadline = t.deadline
-            if (planned != null && planned < now) {
+            if (deadline != null && deadline < now) {
+                "Запланированы ранее"
+            } else if (planned != null && planned < now && deadline == null) {
                 "Запланированы ранее"
             } else if (deadline != null) {
                 dateKey(deadline)
@@ -1372,6 +1432,14 @@ private fun TimelineList(
             contentPadding = PaddingValues(horizontal = 18.dp, vertical = 6.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
+            if (favoriteNotes.isNotEmpty()) {
+                item {
+                    FavoriteNotesSection(
+                        notes = favoriteNotes,
+                        onOpen = onOpenFavorite
+                    )
+                }
+            }
             grouped.forEach { (k, v) ->
                 item {
                     Text(
@@ -1418,6 +1486,7 @@ private fun TimelineList(
 @Composable
 private fun FlatList(
     tasks: List<TodoTask>,
+    favoriteNotes: List<Note>,
     onToggleDone: (String) -> Unit,
     onToggleSub: (String, String) -> Unit,
     onOpenDetails: (TodoTask) -> Unit,
@@ -1429,7 +1498,8 @@ private fun FlatList(
     noteCount: (TodoTask) -> Int,
     onOpenNotes: (TodoTask) -> Unit,
     dimScroll: Boolean,
-    backdrop: com.kyant.backdrop.backdrops.LayerBackdrop
+    backdrop: com.kyant.backdrop.backdrops.LayerBackdrop,
+    onOpenFavorite: (Note) -> Unit
 ) {
     val listState = rememberLazyListState()
     Box(Modifier.fillMaxWidth()) {
@@ -1438,6 +1508,14 @@ private fun FlatList(
             contentPadding = PaddingValues(horizontal = 18.dp, vertical = 6.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
+            if (favoriteNotes.isNotEmpty()) {
+                item {
+                    FavoriteNotesSection(
+                        notes = favoriteNotes,
+                        onOpen = onOpenFavorite
+                    )
+                }
+            }
             items(tasks, key = { it.id }) { t ->
                 Box(Modifier.itemPlacement()) {
                     AnimatedVisibility(

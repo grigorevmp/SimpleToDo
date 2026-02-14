@@ -222,7 +222,8 @@ class TodoRepository(
         title: String,
         content: String,
         taskId: String?,
-        folderId: String?
+        folderId: String?,
+        favorite: Boolean = false
     ) {
         mutex.withLock {
             val now = nowInstant()
@@ -232,6 +233,7 @@ class TodoRepository(
                 content = content,
                 taskId = taskId,
                 folderId = folderId,
+                favorite = favorite,
                 createdAt = now,
                 updatedAt = now
             )
@@ -262,6 +264,16 @@ class TodoRepository(
             if (updated.taskId != null) {
                 addLink(taskId = updated.taskId, noteId = note.id)
             }
+        }
+    }
+
+    suspend fun toggleNoteFavorite(noteId: String) {
+        mutex.withLock {
+            val updated = _notes.value.map { n ->
+                if (n.id == noteId) n.copy(favorite = !n.favorite, updatedAt = nowInstant()) else n
+            }
+            _notes.value = updated
+            saveNotes(updated)
         }
     }
 
@@ -464,15 +476,46 @@ class TodoRepository(
 
     fun sortedTasks(tasks: List<TodoTask>, prefs: AppPrefs): List<TodoTask> {
         val sort = prefs.sort
+        val doneCmp = compareBy<TodoTask> { it.done }
+
+        val now = nowInstant().toEpochMilliseconds()
+
+        if (sort.primary == SortField.PLANNED_AT && sort.secondary == SortField.DEADLINE) {
+            val overdueCmp = compareBy<TodoTask> { if (isOverdue(it, now)) 0 else 1 }
+            val plannedCmp = compareBy<TodoTask> { plannedSortKey(it, now) }
+            val deadlineCmp = compareBy<TodoTask> { it.deadline?.toEpochMilliseconds() ?: Long.MAX_VALUE }
+
+            val primaryCmp = if (sort.primaryDir == SortDir.ASC) plannedCmp else plannedCmp.reversed()
+            val secondaryCmp = if (sort.secondaryDir == SortDir.ASC) deadlineCmp else deadlineCmp.reversed()
+
+            return tasks.sortedWith(doneCmp.then(overdueCmp).then(primaryCmp).then(secondaryCmp))
+        }
+
         val cmp = compareBy<TodoTask> { sortKey(it, sort.primary) }
         val primaryCmp = if (sort.primaryDir == SortDir.ASC) cmp else cmp.reversed()
 
         val cmp2 = compareBy<TodoTask> { sortKey(it, sort.secondary) }
         val secondaryCmp = if (sort.secondaryDir == SortDir.ASC) cmp2 else cmp2.reversed()
 
-        val doneCmp = compareBy<TodoTask> { it.done }
-
         return tasks.sortedWith(doneCmp.then(primaryCmp).then(secondaryCmp))
+    }
+
+    private fun plannedSortKey(task: TodoTask, nowMs: Long): Long {
+        val planned = task.plannedAt?.toEpochMilliseconds()
+        val deadline = task.deadline?.toEpochMilliseconds()
+
+        return when {
+            planned == null && deadline != null -> deadline
+            planned == null -> Long.MAX_VALUE
+            planned < nowMs && deadline != null -> deadline
+            else -> planned
+        }
+    }
+
+    private fun isOverdue(task: TodoTask, nowMs: Long): Boolean {
+        val planned = task.plannedAt?.toEpochMilliseconds()
+        val deadline = task.deadline?.toEpochMilliseconds()
+        return (deadline != null && deadline < nowMs) || (planned != null && planned < nowMs && deadline == null)
     }
 
     private fun sortKey(task: TodoTask, field: SortField): Comparable<*> {

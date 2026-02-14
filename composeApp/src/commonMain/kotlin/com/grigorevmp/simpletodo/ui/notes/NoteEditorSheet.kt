@@ -2,6 +2,13 @@ package com.grigorevmp.simpletodo.ui.notes
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
+import kotlinx.coroutines.delay
+import com.grigorevmp.simpletodo.ui.components.SimpleIcons
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.fadeIn
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -75,45 +82,65 @@ fun NoteEditorScreen(
     onDismiss: () -> Unit
 ) {
     val prefs by repo.prefs.collectAsState()
-    var title by remember { mutableStateOf(initial?.title ?: "") }
-    var content by remember { mutableStateOf(TextFieldValue(initial?.content ?: "")) }
-    var taskId by remember { mutableStateOf(initial?.taskId) }
-    var preview by remember { mutableStateOf(false) }
+    var title by remember(initial?.id) { mutableStateOf(initial?.title ?: "") }
+    var content by remember(initial?.id) { mutableStateOf(TextFieldValue(initial?.content ?: "")) }
+    var taskId by remember(initial?.id) { mutableStateOf(initial?.taskId) }
+    var favorite by remember(initial?.id) { mutableStateOf(initial?.favorite ?: false) }
+    var preview by remember(initial?.id) { mutableStateOf(initial != null) }
 
     val linkedTaskTitle = remember(taskId, tasks) {
         tasks.firstOrNull { it.id == taskId }?.title
     }
 
     val scope = rememberCoroutineScope()
+    var editorVisible by remember { mutableStateOf(true) }
+    val exitDurationMs = 220
+
+    fun requestDismiss(animate: Boolean) {
+        if (!animate) {
+            onDismiss()
+            return
+        }
+        if (!editorVisible) return
+        editorVisible = false
+        scope.launch {
+            delay(exitDurationMs.toLong())
+            onDismiss()
+        }
+    }
     val scrollState = rememberScrollState()
     val density = LocalDensity.current
     val imeBottom = WindowInsets.ime.getBottom(density)
     val imeVisible = imeBottom > 0
 
     val saveNote: () -> Unit = saveNote@{
-        val t = title.trim()
-        if (t.isEmpty()) return@saveNote
+        val t = title.trim().ifBlank { "Untitled note" }
 
         scope.launch {
             if (initial == null) {
                 repo.addNote(
-                    title = t, content = content.text, taskId = taskId, folderId = folderId
+                    title = t, content = content.text, taskId = taskId, folderId = folderId, favorite = favorite
                 )
             } else {
                 repo.updateNote(
                     initial.copy(
-                        title = t, content = content.text, taskId = taskId
+                        title = t, content = content.text, taskId = taskId, favorite = favorite
                     )
                 )
             }
-            onDismiss()
+            requestDismiss(animate = true)
         }
     }
 
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background,
+    AnimatedVisibility(
+        visible = editorVisible,
+        enter = fadeIn(tween(180)) + scaleIn(tween(180), initialScale = 0.98f),
+        exit = fadeOut(tween(exitDurationMs)) + scaleOut(tween(exitDurationMs), targetScale = 0.98f)
     ) {
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = MaterialTheme.colorScheme.background,
+        ) {
         Box(Modifier.fillMaxSize()) {
             Column(Modifier.fillMaxSize()) {
                 Row(
@@ -144,13 +171,26 @@ fun NoteEditorScreen(
                                 modifier = if (isIos) Modifier.size(iosTopBarIconSize) else Modifier
                             )
                         }
+                        IconButton(onClick = {
+                            favorite = !favorite
+                            if (initial != null) {
+                                scope.launch { repo.toggleNoteFavorite(initial.id) }
+                            }
+                        }) {
+                            Icon(
+                                imageVector = SimpleIcons.Star,
+                                contentDescription = if (favorite) "Unfavorite" else "Favorite",
+                                tint = if (favorite) MaterialTheme.colorScheme.primary else LocalContentColor.current,
+                                modifier = Modifier.size(iosTopBarIconSize)
+                            )
+                        }
                         val closePainter = if (isIos) {
                             painterResource(Res.drawable.close)
                         } else {
                             rememberVectorPainter(CloseIcon)
                         }
                         val closeTint = if (isIos) MaterialTheme.colorScheme.onSurface else LocalContentColor.current
-                        IconButton(onClick = onDismiss) {
+                        IconButton(onClick = { requestDismiss(animate = false) }) {
                             Icon(
                                 painter = closePainter,
                                 contentDescription = "Close",
@@ -269,6 +309,7 @@ fun NoteEditorScreen(
                     )
                 }
             }
+        }
         }
     }
 }

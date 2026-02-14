@@ -15,6 +15,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.lazy.LazyColumn
@@ -31,6 +34,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -53,13 +57,16 @@ import com.grigorevmp.simpletodo.data.TodoRepository
 import com.grigorevmp.simpletodo.model.Note
 import com.grigorevmp.simpletodo.model.NoteFolder
 import com.grigorevmp.simpletodo.model.NoteSortField
+import com.grigorevmp.simpletodo.model.TodoTask
 import com.grigorevmp.simpletodo.ui.components.FadingScrollEdges
 import com.grigorevmp.simpletodo.ui.components.AppIconId
 import com.grigorevmp.simpletodo.ui.components.PlatformIcon
 import androidx.compose.material3.LocalContentColor
 import com.grigorevmp.simpletodo.ui.components.FolderIcon
 import com.grigorevmp.simpletodo.ui.components.NoteIcon
+import com.grigorevmp.simpletodo.ui.components.SimpleIcons
 import com.grigorevmp.simpletodo.platform.isIos
+import com.grigorevmp.simpletodo.platform.PlatformBackHandler
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.kyant.backdrop.drawBackdrop
@@ -82,8 +89,15 @@ fun NotesScreen(
 ) {
     val tasks by repo.tasks.collectAsState()
     val notes by repo.notes.collectAsState()
+    val links by repo.taskNoteLinks.collectAsState()
     val folders by repo.noteFolders.collectAsState()
     val prefs by repo.prefs.collectAsState()
+    val tasksById = remember(tasks) { tasks.associateBy { it.id } }
+    val linkedTasksByNote = remember(links, tasksById) {
+        links.groupBy { it.noteId }.mapValues { entry ->
+            entry.value.mapNotNull { link -> tasksById[link.taskId] }.distinctBy { it.id }
+        }
+    }
     val scope = rememberCoroutineScope()
 
     var currentFolderId by remember { mutableStateOf<String?>(null) }
@@ -96,6 +110,7 @@ fun NotesScreen(
     var showDeleteFolder by remember { mutableStateOf(false) }
     var deleteFolderId by remember { mutableStateOf<String?>(null) }
     var showSort by remember { mutableStateOf(false) }
+    var showFavorites by remember { mutableStateOf(true) }
 
     val path = remember(currentFolderId, folders) { buildFolderPath(currentFolderId, folders) }
     val childFolders = remember(currentFolderId, folders, prefs.noteSort) {
@@ -105,6 +120,7 @@ fun NotesScreen(
             NoteSortField.NAME -> filtered.sortedBy { it.name.lowercase() }
         }
     }
+    val favoriteNotes = remember(notes) { notes.filter { it.favorite }.sortedByDescending { it.updatedAt } }
     val notesInFolder = remember(currentFolderId, notes, prefs.noteSort) {
         val filtered = notes.filter { it.folderId == currentFolderId }
         when (prefs.noteSort.field) {
@@ -112,20 +128,33 @@ fun NotesScreen(
             NoteSortField.NAME -> filtered.sortedBy { it.title.lowercase() }
         }
     }
-    val combinedItems = remember(childFolders, notesInFolder, prefs.noteSort) {
+    val regularNotesInFolder = remember(currentFolderId, notesInFolder) {
+        if (currentFolderId == null) notesInFolder.filterNot { it.favorite } else notesInFolder
+    }
+
+    val combinedItems = remember(childFolders, regularNotesInFolder, prefs.noteSort) {
         if (prefs.noteSort.foldersOnTop) {
             childFolders.map { NotesListItem.FolderItem(it) } +
-                notesInFolder.map { NotesListItem.NoteItem(it) }
+                regularNotesInFolder.map { NotesListItem.NoteItem(it) }
         } else {
             val items = mutableListOf<NotesListItem>()
             childFolders.forEach { items.add(NotesListItem.FolderItem(it)) }
-            notesInFolder.forEach { items.add(NotesListItem.NoteItem(it)) }
+            regularNotesInFolder.forEach { items.add(NotesListItem.NoteItem(it)) }
             items.sortedWith(notesComparator(prefs.noteSort.field))
         }
     }
     val noteCounts = remember(notes) { notes.groupingBy { it.folderId }.eachCount() }
     val folderCounts = remember(folders) { folders.groupingBy { it.parentId }.eachCount() }
     val backgroundColor = MaterialTheme.colorScheme.background
+    val navigateBack: () -> Unit = {
+        val parent = path.dropLast(1).lastOrNull()?.id
+        currentFolderId = parent
+    }
+
+    PlatformBackHandler(enabled = currentFolderId != null && !showEditor) {
+        navigateBack()
+    }
+
     val listBackdrop = rememberLayerBackdrop {
         drawRect(backgroundColor)
         drawContent()
@@ -157,12 +186,32 @@ fun NotesScreen(
         )
 
         AnimatedVisibility(visible = path.isNotEmpty()) {
-            Text(
-                text = buildBreadcrumb(path),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp)
-            )
+            val scrollState = rememberScrollState()
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(scrollState)
+                    .padding(horizontal = 20.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                BreadcrumbItem(
+                    text = "Notes",
+                    active = path.isEmpty(),
+                    onClick = { currentFolderId = null }
+                )
+                path.forEachIndexed { index, folder ->
+                    Text(
+                        " / ",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    BreadcrumbItem(
+                        text = folder.name,
+                        active = index == path.lastIndex,
+                        onClick = { currentFolderId = folder.id }
+                    )
+                }
+            }
         }
 
         Box(Modifier.fillMaxSize()) {
@@ -203,6 +252,27 @@ fun NotesScreen(
                             },
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
+                            if (currentFolderId == null && favoriteNotes.isNotEmpty()) {
+                                item {
+                                    FavoriteNotesSection(
+                                        notes = favoriteNotes,
+                                        expanded = showFavorites,
+                                        onToggle = { showFavorites = !showFavorites }
+                                    )
+                                }
+                                if (showFavorites) {
+                                    items(favoriteNotes, key = { "fav_${it.id}" }) { fav ->
+                                        NoteRow(
+                                            note = fav,
+                                            linkedTasks = linkedTasksByNote[fav.id].orEmpty(),
+                                            onToggleFavorite = { scope.launch { repo.toggleNoteFavorite(fav.id) } },
+                                            onOpen = { editNote = fav; showEditor = true },
+                                            onDelete = { scope.launch { repo.deleteNote(fav.id) } }
+                                        )
+                                    }
+                                }
+                                item { Spacer(Modifier.height(8.dp)) }
+                            }
                             items(combinedItems, key = { it.key }) { item ->
                                 when (item) {
                                     is NotesListItem.FolderItem -> FolderRow(
@@ -217,6 +287,8 @@ fun NotesScreen(
                                     )
                                     is NotesListItem.NoteItem -> NoteRow(
                                         note = item.note,
+                                        linkedTasks = linkedTasksByNote[item.note.id].orEmpty(),
+                                        onToggleFavorite = { scope.launch { repo.toggleNoteFavorite(item.note.id) } },
                                         onOpen = { editNote = item.note; showEditor = true },
                                         onDelete = { scope.launch { repo.deleteNote(item.note.id) } }
                                     )
@@ -247,10 +319,7 @@ fun NotesScreen(
             if (currentFolderId != null) {
                 BackActionButton(
                     backdrop = listBackdrop,
-                    onBack = {
-                        val parent = path.dropLast(1).lastOrNull()?.id
-                        currentFolderId = parent
-                    },
+                    onBack = { navigateBack() },
                     enableEffects = prefs.liquidGlass && !isIos,
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
@@ -396,6 +465,8 @@ private fun FolderRow(
 @OptIn(ExperimentalResourceApi::class)
 private fun NoteRow(
     note: Note,
+    linkedTasks: List<TodoTask>,
+    onToggleFavorite: () -> Unit,
     onOpen: () -> Unit,
     onDelete: () -> Unit
 ) {
@@ -445,6 +516,28 @@ private fun NoteRow(
                             overflow = TextOverflow.Ellipsis
                         )
                     }
+                    if (linkedTasks.isNotEmpty()) {
+                        val label = if (linkedTasks.size == 1) {
+                            "Linked: ${linkedTasks.first().title}"
+                        } else {
+                            "Linked tasks: ${linkedTasks.size}"
+                        }
+                        Text(
+                            label,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+                if (note.favorite) {
+                    Icon(
+                        imageVector = SimpleIcons.Star,
+                        contentDescription = "Favorite",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(18.dp)
+                    )
                 }
             }
         }
@@ -455,6 +548,13 @@ private fun NoteRow(
             containerColor = MaterialTheme.colorScheme.surface,
             tonalElevation = 2.dp
         ) {
+            DropdownMenuItem(
+                text = { Text(if (note.favorite) "Remove from favorites" else "Add to favorites") },
+                onClick = {
+                    showActions = false
+                    onToggleFavorite()
+                }
+            )
             DropdownMenuItem(
                 text = { Text("Delete") },
                 onClick = {
@@ -669,6 +769,57 @@ private fun NewFolderRow(
     }
 }
 
+@Composable
+private fun FavoriteNotesSection(
+    notes: List<Note>,
+    expanded: Boolean,
+    onToggle: () -> Unit
+) {
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+    ) {
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .clickable { onToggle() }
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column {
+                Text("Favorites", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "${notes.size} notes",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Icon(
+                imageVector = if (expanded) SimpleIcons.ArrowUp else SimpleIcons.ArrowDown,
+                contentDescription = if (expanded) "Collapse" else "Expand",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun BreadcrumbItem(
+    text: String,
+    active: Boolean,
+    onClick: () -> Unit
+) {
+    val color = if (active) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
+    Text(
+        text = text,
+        style = MaterialTheme.typography.bodySmall,
+        color = color,
+        modifier = Modifier.clickable { onClick() }
+    )
+}
+
 private fun buildFolderPath(currentFolderId: String?, folders: List<NoteFolder>): List<NoteFolder> {
     if (currentFolderId == null) return emptyList()
     val map = folders.associateBy { it.id }
@@ -679,11 +830,6 @@ private fun buildFolderPath(currentFolderId: String?, folders: List<NoteFolder>)
         current = current.parentId?.let { map[it] }
     }
     return path.reversed()
-}
-
-private fun buildBreadcrumb(path: List<NoteFolder>): String {
-    val names = path.joinToString(" / ") { it.name }
-    return if (names.isBlank()) "Notes" else "Notes / $names"
 }
 
 private sealed class NotesListItem(val key: String) {

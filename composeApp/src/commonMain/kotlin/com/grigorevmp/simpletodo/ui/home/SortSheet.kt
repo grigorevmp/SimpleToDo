@@ -99,13 +99,27 @@ fun SortSheet(
                 }
             }
 
-            Button(
-                onClick = {
-                    onApply(SortConfig(primary, primaryDir, secondary, secondaryDir))
-                    onDismiss()
-                },
-                modifier = Modifier.fillMaxWidth()
-            ) { Text("Apply") }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Button(
+                    onClick = {
+                        val def = SortConfig()
+                        primary = def.primary
+                        primaryDir = def.primaryDir
+                        secondary = def.secondary
+                        secondaryDir = def.secondaryDir
+                        onApply(def)
+                        onDismiss()
+                    },
+                    modifier = Modifier.weight(1f)
+                ) { Text("Reset to default") }
+                Button(
+                    onClick = {
+                        onApply(SortConfig(primary, primaryDir, secondary, secondaryDir))
+                        onDismiss()
+                    },
+                    modifier = Modifier.weight(1f)
+                ) { Text("Apply") }
+            }
 
             Spacer(Modifier.height(18.dp))
         }
