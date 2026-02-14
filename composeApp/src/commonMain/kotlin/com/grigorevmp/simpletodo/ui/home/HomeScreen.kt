@@ -40,6 +40,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -411,7 +412,7 @@ private fun TopBar(
                 )
 
                 Text(
-                    "beta 0.7.0",
+                    "beta 0.7.1",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontStyle = if (isIos) FontStyle.Normal else FontStyle.Italic,
@@ -485,7 +486,10 @@ private fun TaskDetailsSheet(
     onEdit: () -> Unit,
     onClose: () -> Unit
 ) {
-    ModalBottomSheet(onDismissRequest = onClose) {
+    val sheetState = rememberModalBottomSheetState(
+        skipPartiallyExpanded = task.plan.isNotBlank() || task.subtasks.isNotEmpty()
+    )
+    ModalBottomSheet(onDismissRequest = onClose, sheetState = sheetState) {
         Box(Modifier.fillMaxWidth()) {
             ImportanceFlameBackdrop(
                 importance = task.importance,
@@ -493,94 +497,107 @@ private fun TaskDetailsSheet(
                     .matchParentSize()
                     .padding(8.dp)
             )
-            Column(
-                Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+            LazyColumn(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                contentPadding = PaddingValues(bottom = 16.dp)
             ) {
-                Row(
-                    Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
-                ) {
-                    TextButton(onClick = onEdit) { Text("Редактировать") }
-                    Spacer(Modifier.width(8.dp))
-                    TextButton(onClick = onToggleDone) {
-                        Text(if (task.done) "Снять отметку" else "Отметить выполненным")
+                item {
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        TextButton(onClick = onEdit) { Text("Редактировать") }
+                        Spacer(Modifier.width(8.dp))
+                        TextButton(onClick = onToggleDone) {
+                            Text(if (task.done) "Снять отметку" else "Отметить выполненным")
+                        }
                     }
                 }
 
-                Box(Modifier.fillMaxWidth()) {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(task.title, style = MaterialTheme.typography.titleLarge)
-                        Row(
-                            Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            tagName(task.tagId)?.let { name ->
-                                TagChipLabel(name)
+                item {
+                    Box(Modifier.fillMaxWidth()) {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text(task.title, style = MaterialTheme.typography.titleLarge)
+                            Row(
+                                Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                tagName(task.tagId)?.let { name ->
+                                    TagChipLabel(name)
+                                }
+                                if (notes.isNotEmpty()) {
+                                    Spacer(Modifier.width(8.dp))
+                                    NoteChipLabel(
+                                        count = notes.size,
+                                        onOpen = onOpenNotes
+                                    )
+                                }
                             }
-                            if (notes.isNotEmpty()) {
-                                Spacer(Modifier.width(8.dp))
-                                NoteChipLabel(
-                                    count = notes.size,
-                                    onOpen = onOpenNotes
+                        }
+                    }
+                }
+
+                item {
+                    DateInfoSection(task)
+                }
+
+                task.estimateHours?.let {
+                    item {
+                        Surface(
+                            shape = MaterialTheme.shapes.large,
+                            color = MaterialTheme.colorScheme.surface
+                        ) {
+                            Column(
+                                Modifier.fillMaxWidth().padding(14.dp),
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Text("Estimate", style = MaterialTheme.typography.titleMedium)
+                                Text(
+                                    formatHours(it),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
                     }
                 }
 
-                DateInfoSection(task)
-
-                task.estimateHours?.let {
-                    Surface(
-                        shape = MaterialTheme.shapes.large,
-                        color = MaterialTheme.colorScheme.surface
-                    ) {
-                        Column(
-                            Modifier.fillMaxWidth().padding(14.dp),
-                            verticalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            Text("Estimate", style = MaterialTheme.typography.titleMedium)
-                            Text(
-                                formatHours(it),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                }
-
                 if (task.plan.isNotBlank()) {
-                    Surface(
-                        shape = MaterialTheme.shapes.large,
-                        color = MaterialTheme.colorScheme.surface
-                    ) {
-                        Column(
-                            Modifier.fillMaxWidth().padding(14.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                    item {
+                        Surface(
+                            shape = MaterialTheme.shapes.large,
+                            color = MaterialTheme.colorScheme.surface
                         ) {
-                            Text("Details", style = MaterialTheme.typography.titleMedium)
-                            Text(task.plan, style = MaterialTheme.typography.bodyMedium)
+                            Column(
+                                Modifier.fillMaxWidth().padding(14.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text("Details", style = MaterialTheme.typography.titleMedium)
+                                Text(task.plan, style = MaterialTheme.typography.bodyMedium)
+                            }
                         }
                     }
                 }
 
                 if (task.subtasks.isNotEmpty()) {
-                    Surface(
-                        shape = MaterialTheme.shapes.large,
-                        color = MaterialTheme.colorScheme.surface
-                    ) {
-                        Column(
-                            Modifier.fillMaxWidth().padding(14.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                    item {
+                        Surface(
+                            shape = MaterialTheme.shapes.large,
+                            color = MaterialTheme.colorScheme.surface
                         ) {
-                            Text("Subtasks", style = MaterialTheme.typography.titleMedium)
-                            SubtasksInteractive(task, onToggleSub)
+                            Column(
+                                Modifier.fillMaxWidth().padding(14.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text("Subtasks", style = MaterialTheme.typography.titleMedium)
+                                SubtasksInteractive(task, onToggleSub)
+                            }
                         }
                     }
                 }
 
-                Spacer(Modifier.height(8.dp))
+                item { Spacer(Modifier.height(8.dp)) }
             }
         }
     }
@@ -640,54 +657,53 @@ private fun TaskNotesSheet(
     onOpenNote: (Note) -> Unit,
     onDismiss: () -> Unit
 ) {
-    ModalBottomSheet(onDismissRequest = onDismiss) {
-        Column(
-            Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = notes.isNotEmpty())
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
+        LazyColumn(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            contentPadding = PaddingValues(horizontal = 18.dp, vertical = 16.dp)
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("Notes", style = MaterialTheme.typography.titleLarge)
-                Text(
-                    "${notes.size} linked to \"$taskTitle\"",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("Notes", style = MaterialTheme.typography.titleLarge)
+                    Text(
+                        "${notes.size} linked to \"$taskTitle\"",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
 
-            LazyColumn(
-                contentPadding = PaddingValues(bottom = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                items(notes, key = { it.id }) { note ->
-                    Surface(
-                        shape = MaterialTheme.shapes.large,
-                        color = MaterialTheme.colorScheme.surface,
-                        tonalElevation = 2.dp,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onOpenNote(note) }
+            items(notes, key = { it.id }) { note ->
+                Surface(
+                    shape = MaterialTheme.shapes.large,
+                    color = MaterialTheme.colorScheme.surface,
+                    tonalElevation = 2.dp,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onOpenNote(note) }
+                ) {
+                    Column(
+                        Modifier.padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Column(
-                            Modifier.padding(14.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Text(
-                                note.title.ifBlank { "Untitled" },
-                                style = MaterialTheme.typography.titleMedium
-                            )
-                            Text(
-                                formatDeadline(note.updatedAt),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Text(
-                                notePreview(note),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 3,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
+                        Text(
+                            note.title.ifBlank { "Untitled" },
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        Text(
+                            formatDeadline(note.updatedAt),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            notePreview(note),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 3,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
                 }
             }

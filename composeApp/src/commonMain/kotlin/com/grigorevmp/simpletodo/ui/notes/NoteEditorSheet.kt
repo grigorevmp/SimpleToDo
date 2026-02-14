@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
@@ -22,6 +23,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -35,24 +37,35 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.grigorevmp.simpletodo.data.TodoRepository
 import com.grigorevmp.simpletodo.model.Note
 import com.grigorevmp.simpletodo.model.TodoTask
+import com.grigorevmp.simpletodo.platform.isIos
 import com.grigorevmp.simpletodo.ui.components.CloseIcon
 import com.grigorevmp.simpletodo.ui.components.FadingScrollEdges
 import com.grigorevmp.simpletodo.ui.components.NoOverscroll
 import com.grigorevmp.simpletodo.ui.components.VisibilityIcon
 import com.grigorevmp.simpletodo.ui.components.VisibilityOffIcon
-import com.grigorevmp.simpletodo.ui.components.SimpleIcons
+import com.grigorevmp.simpletodo.ui.components.platformSavePainter
 import com.grigorevmp.simpletodo.ui.notes.create.MarkdownToolbar
 import com.grigorevmp.simpletodo.ui.notes.create.TaskLinkPicker
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.ExperimentalResourceApi
+import org.jetbrains.compose.resources.painterResource
+import simpletodo.composeapp.generated.resources.Res
+import simpletodo.composeapp.generated.resources.close
+import simpletodo.composeapp.generated.resources.save
+import simpletodo.composeapp.generated.resources.visibility_off
+import simpletodo.composeapp.generated.resources.visibility_on
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class, ExperimentalResourceApi::class)
 @Composable
 fun NoteEditorScreen(
     repo: TodoRepository,
@@ -114,14 +127,36 @@ fun NoteEditorScreen(
                     )
 
                     Row(verticalAlignment = Alignment.CenterVertically) {
+                        val iosTopBarIconSize: Dp = 24.dp
+                        val visibilityPainter = if (isIos) {
+                            painterResource(
+                                if (preview) Res.drawable.visibility_off else Res.drawable.visibility_on
+                            )
+                        } else {
+                            rememberVectorPainter(if (preview) VisibilityOffIcon else VisibilityIcon)
+                        }
+                        val visibilityTint = if (isIos) MaterialTheme.colorScheme.onSurface else LocalContentColor.current
                         IconButton(onClick = { preview = !preview }) {
                             Icon(
-                                if (preview) VisibilityOffIcon else VisibilityIcon,
-                                contentDescription = if (preview) "Edit mode" else "Preview mode"
+                                painter = visibilityPainter,
+                                contentDescription = if (preview) "Edit mode" else "Preview mode",
+                                tint = visibilityTint,
+                                modifier = if (isIos) Modifier.size(iosTopBarIconSize) else Modifier
                             )
                         }
+                        val closePainter = if (isIos) {
+                            painterResource(Res.drawable.close)
+                        } else {
+                            rememberVectorPainter(CloseIcon)
+                        }
+                        val closeTint = if (isIos) MaterialTheme.colorScheme.onSurface else LocalContentColor.current
                         IconButton(onClick = onDismiss) {
-                            Icon(CloseIcon, contentDescription = "Close")
+                            Icon(
+                                painter = closePainter,
+                                contentDescription = "Close",
+                                tint = closeTint,
+                                modifier = if (isIos) Modifier.size(iosTopBarIconSize) else Modifier
+                            )
                         }
                     }
                 }
@@ -221,15 +256,16 @@ fun NoteEditorScreen(
             }
 
             if (imeVisible) {
+                val savePainter = platformSavePainter()
                 FloatingActionButton(
                     onClick = saveNote,
                     modifier = Modifier.align(Alignment.BottomEnd).padding(8.dp).imePadding(),
                     containerColor = MaterialTheme.colorScheme.primary
                 ) {
                     Icon(
-                        SimpleIcons.Save,
+                        painter = savePainter,
                         contentDescription = "Save",
-                        tint = MaterialTheme.colorScheme.onPrimary
+                        tint = if (isIos) Color.Unspecified else MaterialTheme.colorScheme.onPrimary
                     )
                 }
             }

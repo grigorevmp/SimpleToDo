@@ -44,6 +44,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
@@ -66,6 +67,10 @@ import com.kyant.backdrop.effects.blur
 import com.kyant.backdrop.effects.lens
 import com.kyant.backdrop.effects.vibrancy
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.ExperimentalResourceApi
+import org.jetbrains.compose.resources.painterResource
+import simpletodo.composeapp.generated.resources.Res
+import simpletodo.composeapp.generated.resources.notes
 
 @Composable
 fun NotesScreen(
@@ -388,6 +393,7 @@ private fun FolderRow(
 }
 
 @Composable
+@OptIn(ExperimentalResourceApi::class)
 private fun NoteRow(
     note: Note,
     onOpen: () -> Unit,
@@ -409,10 +415,16 @@ private fun NoteRow(
                 Modifier.fillMaxWidth().padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                val notePainter = if (isIos) {
+                    painterResource(Res.drawable.notes)
+                } else {
+                    rememberVectorPainter(NoteIcon)
+                }
+                val noteTint = MaterialTheme.colorScheme.primary
                 Icon(
-                    NoteIcon,
+                    painter = notePainter,
                     contentDescription = "Note",
-                    tint = MaterialTheme.colorScheme.primary,
+                    tint = noteTint,
                     modifier = Modifier.size(22.dp)
                 )
                 Spacer(Modifier.width(12.dp))
@@ -498,7 +510,10 @@ private fun NotesActionBar(
     val lensInnerPx = with(density) { 10.dp.toPx() }
     val lensOuterPx = with(density) { 20.dp.toPx() }
 
-    Box(modifier = modifier, contentAlignment = Alignment.Center) {
+    Box(modifier = modifier
+        .padding(bottom = 8.dp),
+        contentAlignment = Alignment.Center
+    ) {
         Box(
             modifier = Modifier
                 .clip(RoundedCornerShape(64.dp))
@@ -570,7 +585,7 @@ private fun BackActionButton(
 
     Box(
         modifier = modifier
-            .padding(end = 16.dp),
+            .padding(end = 16.dp, bottom = 8.dp),
         contentAlignment = Alignment.Center
     ) {
         Box(

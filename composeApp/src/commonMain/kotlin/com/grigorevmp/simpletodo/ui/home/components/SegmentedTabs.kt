@@ -39,7 +39,8 @@ fun SegmentedTabs(
 
     Box(
         modifier
-            .fillMaxWidth(),
+            .fillMaxWidth()
+            .padding(bottom = 8.dp),
         contentAlignment = Alignment.Center
     ) {
         Box(

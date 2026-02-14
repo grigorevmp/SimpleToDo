@@ -196,8 +196,8 @@ fun App() {
                     backdrop = backdrop,
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
-                        .padding(horizontal = 22.dp, vertical = 12.dp)
-                        .padding(bottom = 8.dp)
+                        .padding(horizontal = 22.dp, vertical = if (isIos) 8.dp else 12.dp)
+                        .padding(bottom = if (isIos) 2.dp else 8.dp)
                 )
             }
         }
