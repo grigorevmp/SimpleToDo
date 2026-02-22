@@ -71,6 +71,23 @@ import simpletodo.composeapp.generated.resources.save
 import simpletodo.composeapp.generated.resources.visibility_off
 import simpletodo.composeapp.generated.resources.visibility_on
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import org.jetbrains.compose.resources.stringResource
+import simpletodo.composeapp.generated.resources.note_editor_untitled
+import simpletodo.composeapp.generated.resources.note_editor_new
+import simpletodo.composeapp.generated.resources.note_editor_edit
+import simpletodo.composeapp.generated.resources.note_editor_edit_mode_cd
+import simpletodo.composeapp.generated.resources.note_editor_preview_mode_cd
+import simpletodo.composeapp.generated.resources.note_editor_unfavorite_cd
+import simpletodo.composeapp.generated.resources.note_editor_favorite_cd
+import simpletodo.composeapp.generated.resources.note_editor_close_cd
+import simpletodo.composeapp.generated.resources.note_editor_title_label
+import simpletodo.composeapp.generated.resources.note_editor_text_label
+import simpletodo.composeapp.generated.resources.note_editor_linked_task
+import simpletodo.composeapp.generated.resources.note_editor_no_task
+import simpletodo.composeapp.generated.resources.note_editor_no_content
+import simpletodo.composeapp.generated.resources.note_editor_create
+import simpletodo.composeapp.generated.resources.note_editor_save
+import simpletodo.composeapp.generated.resources.note_editor_save_cd
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class, ExperimentalResourceApi::class)
 @Composable
@@ -113,8 +130,9 @@ fun NoteEditorScreen(
     val imeBottom = WindowInsets.ime.getBottom(density)
     val imeVisible = imeBottom > 0
 
+    val untitledNote = stringResource(Res.string.note_editor_untitled)
     val saveNote: () -> Unit = saveNote@{
-        val t = title.trim().ifBlank { "Untitled note" }
+        val t = title.trim().ifBlank { untitledNote }
 
         scope.launch {
             if (initial == null) {
@@ -149,7 +167,7 @@ fun NoteEditorScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        if (initial == null) "New note" else "Edit note",
+                        if (initial == null) stringResource(Res.string.note_editor_new) else stringResource(Res.string.note_editor_edit),
                         style = MaterialTheme.typography.titleLarge
                     )
 
@@ -166,7 +184,11 @@ fun NoteEditorScreen(
                         IconButton(onClick = { preview = !preview }) {
                             Icon(
                                 painter = visibilityPainter,
-                                contentDescription = if (preview) "Edit mode" else "Preview mode",
+                                contentDescription = if (preview) {
+                                    stringResource(Res.string.note_editor_edit_mode_cd)
+                                } else {
+                                    stringResource(Res.string.note_editor_preview_mode_cd)
+                                },
                                 tint = visibilityTint,
                                 modifier = if (isIos) Modifier.size(iosTopBarIconSize) else Modifier
                             )
@@ -179,7 +201,11 @@ fun NoteEditorScreen(
                         }) {
                             Icon(
                                 imageVector = SimpleIcons.Star,
-                                contentDescription = if (favorite) "Unfavorite" else "Favorite",
+                                contentDescription = if (favorite) {
+                                    stringResource(Res.string.note_editor_unfavorite_cd)
+                                } else {
+                                    stringResource(Res.string.note_editor_favorite_cd)
+                                },
                                 tint = if (favorite) MaterialTheme.colorScheme.primary else LocalContentColor.current,
                                 modifier = Modifier.size(iosTopBarIconSize)
                             )
@@ -193,7 +219,7 @@ fun NoteEditorScreen(
                         IconButton(onClick = { requestDismiss(animate = false) }) {
                             Icon(
                                 painter = closePainter,
-                                contentDescription = "Close",
+                                contentDescription = stringResource(Res.string.note_editor_close_cd),
                                 tint = closeTint,
                                 modifier = if (isIos) Modifier.size(iosTopBarIconSize) else Modifier
                             )
@@ -216,7 +242,7 @@ fun NoteEditorScreen(
                                         OutlinedTextField(
                                             value = title,
                                             onValueChange = { title = it },
-                                            label = { Text("Title") },
+                                            label = { Text(stringResource(Res.string.note_editor_title_label)) },
                                             modifier = Modifier.fillMaxWidth()
                                         )
 
@@ -229,7 +255,7 @@ fun NoteEditorScreen(
                                         OutlinedTextField(
                                             value = content,
                                             onValueChange = { content = it },
-                                            label = { Text("Note tex") },
+                                            label = { Text(stringResource(Res.string.note_editor_text_label)) },
                                             modifier = Modifier.fillMaxWidth(),
                                             minLines = 12
                                         )
@@ -237,17 +263,20 @@ fun NoteEditorScreen(
                                 } else {
                                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                                         Text(
-                                            title.ifBlank { "Untitled note" },
+                                            title.ifBlank { stringResource(Res.string.note_editor_untitled) },
                                             style = MaterialTheme.typography.titleLarge
                                         )
                                         Text(
-                                            "Linked task: ${linkedTaskTitle ?: "No task"}",
+                                            stringResource(
+                                                Res.string.note_editor_linked_task,
+                                                linkedTaskTitle ?: stringResource(Res.string.note_editor_no_task)
+                                            ),
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                         if (content.text.isBlank()) {
                                             Text(
-                                                "No content",
+                                                stringResource(Res.string.note_editor_no_content),
                                                 style = MaterialTheme.typography.bodyMedium,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
@@ -290,7 +319,9 @@ fun NoteEditorScreen(
                     ) {
                         Button(
                             onClick = saveNote, modifier = Modifier.fillMaxWidth()
-                        ) { Text(if (initial == null) "Create" else "Save") }
+                        ) {
+                            Text(if (initial == null) stringResource(Res.string.note_editor_create) else stringResource(Res.string.note_editor_save))
+                        }
                     }
                 }
             }
@@ -304,7 +335,7 @@ fun NoteEditorScreen(
                 ) {
                     Icon(
                         painter = savePainter,
-                        contentDescription = "Save",
+                        contentDescription = stringResource(Res.string.note_editor_save_cd),
                         tint = if (isIos) Color.Unspecified else MaterialTheme.colorScheme.onPrimary
                     )
                 }

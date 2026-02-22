@@ -7,7 +7,6 @@ import com.grigorevmp.simpletodo.model.Subtask
 import com.grigorevmp.simpletodo.model.ThemeMode
 import com.grigorevmp.simpletodo.model.TodoTask
 import com.grigorevmp.simpletodo.ui.theme.DinoTheme
-import com.kyant.backdrop.backdrops.LayerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import kotlinx.datetime.Clock
 
@@ -29,7 +28,6 @@ private fun TaskCardPreviewMinimal() {
             onDelete = {},
             onOpenNotes = {},
             noteCount = 0,
-            backdrop = backdrop,
             onClearCompleted = {},
         )
     }
@@ -53,7 +51,6 @@ private fun TaskCardPreviewPlanned() {
             onDelete = {},
             onOpenNotes = {},
             noteCount = 0,
-            backdrop = backdrop,
             onClearCompleted = {},
         )
     }
@@ -77,7 +74,6 @@ private fun TaskCardPreviewCritical() {
             onDelete = {},
             onOpenNotes = {},
             noteCount = 0,
-            backdrop = backdrop,
             onClearCompleted = {},
         )
     }
@@ -101,7 +97,6 @@ private fun TaskCardPreviewDone() {
             onDelete = {},
             onOpenNotes = {},
             noteCount = 0,
-            backdrop = backdrop,
             onClearCompleted = {},
         )
     }

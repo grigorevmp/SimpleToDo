@@ -7,9 +7,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInVertically
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.LocalIndication
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -23,6 +21,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -39,33 +38,27 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionInRoot
 import com.grigorevmp.simpletodo.model.Importance
 import com.grigorevmp.simpletodo.model.TodoTask
+import com.grigorevmp.simpletodo.ui.components.AppIconId
+import com.grigorevmp.simpletodo.ui.components.CircleCheckbox
 import com.grigorevmp.simpletodo.ui.components.DeleteIcon
 import com.grigorevmp.simpletodo.ui.components.EditIcon
-import com.grigorevmp.simpletodo.ui.components.NoteIcon
-import com.grigorevmp.simpletodo.ui.components.AppIconId
-import com.grigorevmp.simpletodo.ui.components.PlatformIcon
 import com.grigorevmp.simpletodo.ui.components.FlameIcon
+import com.grigorevmp.simpletodo.ui.components.NoteIcon
+import com.grigorevmp.simpletodo.ui.components.PlatformIcon
 import com.grigorevmp.simpletodo.ui.components.SimpleIcons
-import com.grigorevmp.simpletodo.ui.components.CircleCheckbox
 import com.grigorevmp.simpletodo.util.formatDeadline
 import com.grigorevmp.simpletodo.util.nowInstant
-import com.kyant.backdrop.backdrops.LayerBackdrop
-import com.kyant.backdrop.drawBackdrop
-import com.kyant.backdrop.effects.blur
-import com.kyant.backdrop.effects.lens
-import com.kyant.backdrop.effects.vibrancy
 import kotlinx.datetime.Instant
+import org.jetbrains.compose.resources.stringResource
+import simpletodo.composeapp.generated.resources.Res
+import simpletodo.composeapp.generated.resources.home_subtasks
+import simpletodo.composeapp.generated.resources.task_deadline_prefix
+import simpletodo.composeapp.generated.resources.task_remaining_subs
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -74,7 +67,6 @@ fun TaskCard(
     task: TodoTask,
     tagLabel: String?,
     noteCount: Int,
-    backdrop: LayerBackdrop,
     onOpenNotes: () -> Unit,
     onToggleDone: () -> Unit,
     onToggleSub: (String) -> Unit,
@@ -90,17 +82,6 @@ fun TaskCard(
     val cardInteraction = remember { MutableInteractionSource() }
     val cardIndication = LocalIndication.current
     val menuShape = MaterialTheme.shapes.large
-    val glassBase = MaterialTheme.colorScheme.surfaceVariant
-    val glassBrush = Brush.verticalGradient(
-        listOf(
-            glassBase.copy(alpha = 0.12f),
-            glassBase.copy(alpha = 0.28f)
-        )
-    )
-    val density = LocalDensity.current
-    val blurPx = with(density) { 3.dp.toPx() }
-    val lensInnerPx = with(density) { 10.dp.toPx() }
-    val lensOuterPx = with(density) { 20.dp.toPx() }
     val tone = when (task.importance) {
         Importance.LOW -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.10f)
         Importance.NORMAL -> MaterialTheme.colorScheme.surfaceVariant
@@ -112,9 +93,9 @@ fun TaskCard(
     val longEstimate = (task.estimateHours ?: 0.0) > 6.0
     val remainingSubs = task.subtasks.count { !it.done }
     val subLabel = if (remainingSubs > 0) {
-        "Осталось: $remainingSubs"
+        stringResource(Res.string.task_remaining_subs, remainingSubs.toString())
     } else {
-        "Подзадачи"
+        stringResource(Res.string.home_subtasks)
     }
 
     Box(modifier.fillMaxWidth()) {
@@ -144,19 +125,24 @@ fun TaskCard(
                     .animateContentSize(animationSpec = tween(durationMillis = 100)),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                if (deadlineSoon) {
-                    StatusBanner(
-                        text = task.deadline?.let { deadlineLabel(it) } ?: "",
-                        color = MaterialTheme.colorScheme.error,
-                        onColor = MaterialTheme.colorScheme.onError
-                    )
-                }
-                if (longEstimate) {
-                    StatusBanner(
-                        text = "Долгая задача",
-                        color = MaterialTheme.colorScheme.onSurface,
-                        onColor = MaterialTheme.colorScheme.surface
-                    )
+                if (deadlineSoon || longEstimate) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (deadlineSoon) {
+                            StatusBanner(
+                                text = task.deadline?.let { deadlineLabel(it) } ?: "",
+                                color = MaterialTheme.colorScheme.error,
+                                onColor = MaterialTheme.colorScheme.onError,
+                                icon = FlameIcon
+                            )
+                        }
+                        if (longEstimate) {
+                            StatusBanner(
+                                text = "Долгая задача",
+                                color = MaterialTheme.colorScheme.onSurface,
+                                onColor = MaterialTheme.colorScheme.surface
+                            )
+                        }
+                    }
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -181,11 +167,23 @@ fun TaskCard(
                 }
 
                 if (task.plan.isNotBlank()) {
-                    Text(task.plan, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        task.plan,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
 
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    task.deadline?.let { InfoChip("Deadline: ${formatDeadline(it)}") }
+                    task.deadline?.let {
+                        InfoChip(
+                            text = stringResource(
+                                Res.string.task_deadline_prefix,
+                                formatDeadline(it)
+                            ),
+                            icon = FlameIcon
+                        )
+                    }
                     task.estimateHours?.let { InfoChip(formatHours(it)) }
                 }
 
@@ -207,7 +205,11 @@ fun TaskCard(
                                     tint = MaterialTheme.colorScheme.primary
                                 )
                                 Spacer(Modifier.width(6.dp))
-                                Text(tagLabel, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                                Text(
+                                    tagLabel,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
                             }
                         }
                     }
@@ -310,7 +312,12 @@ fun TaskCard(
                     )
                     if (task.done) {
                         DropdownMenuItem(
-                            text = { Text("Очистить все выполненные", style = MaterialTheme.typography.titleMedium) },
+                            text = {
+                                Text(
+                                    "Очистить все выполненные",
+                                    style = MaterialTheme.typography.titleMedium
+                                )
+                            },
                             leadingIcon = { Icon(DeleteIcon, contentDescription = null) },
                             onClick = {
                                 showActions = false
@@ -370,34 +377,69 @@ private fun formatHours(v: Double): String {
 }
 
 @Composable
-private fun InfoChip(text: String) {
+private fun InfoChip(
+    text: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector? = null
+) {
     Surface(
         shape = MaterialTheme.shapes.small,
         color = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)
     ) {
-        Text(
-            text,
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-        )
+        Row(
+            Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            if (icon != null) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(14.dp)
+                )
+            }
+            Text(
+                text,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }
 
 @Composable
-private fun StatusBanner(text: String, color: androidx.compose.ui.graphics.Color, onColor: androidx.compose.ui.graphics.Color) {
+private fun StatusBanner(
+    text: String,
+    color: androidx.compose.ui.graphics.Color,
+    onColor: androidx.compose.ui.graphics.Color,
+    icon: androidx.compose.ui.graphics.vector.ImageVector? = null
+) {
     Surface(
         shape = MaterialTheme.shapes.small,
         color = color
     ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.labelLarge,
-            color = onColor,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-        )
+        Row(
+            Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            if (icon != null) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = onColor,
+                    modifier = Modifier.size(14.dp)
+                )
+            }
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelLarge,
+                color = onColor
+            )
+        }
     }
 }
+
 
 private fun daysUntil(deadline: Instant): Int {
     val now = nowInstant()
@@ -410,8 +452,7 @@ private fun daysUntil(deadline: Instant): Int {
 private fun deadlineLabel(deadline: Instant): String {
     val now = nowInstant()
     if (deadline < now) return "Дедлайн истек"
-    val days = daysUntil(deadline)
-    return when (days) {
+    return when (val days = daysUntil(deadline)) {
         0 -> "Дедлайн сегодня"
         1 -> "Дедлайн через 1 день"
         in 2..4 -> "Дедлайн через $days дня"

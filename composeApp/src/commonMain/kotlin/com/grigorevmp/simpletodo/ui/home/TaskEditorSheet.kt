@@ -75,6 +75,41 @@ import com.grigorevmp.simpletodo.ui.components.FadingScrollEdges
 import com.grigorevmp.simpletodo.ui.components.NoOverscroll
 import com.grigorevmp.simpletodo.util.newId
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
+import simpletodo.composeapp.generated.resources.Res
+import simpletodo.composeapp.generated.resources.task_editor_new
+import simpletodo.composeapp.generated.resources.task_editor_edit
+import simpletodo.composeapp.generated.resources.task_close_cd
+import simpletodo.composeapp.generated.resources.task_title_label
+import simpletodo.composeapp.generated.resources.task_plan_label
+import simpletodo.composeapp.generated.resources.task_show_details
+import simpletodo.composeapp.generated.resources.task_hide_details
+import simpletodo.composeapp.generated.resources.task_planned_time_label
+import simpletodo.composeapp.generated.resources.task_estimate_label
+import simpletodo.composeapp.generated.resources.task_deadline_label
+import simpletodo.composeapp.generated.resources.task_priority_label
+import simpletodo.composeapp.generated.resources.task_tag_label
+import simpletodo.composeapp.generated.resources.task_linked_note_label
+import simpletodo.composeapp.generated.resources.home_subtasks
+import simpletodo.composeapp.generated.resources.task_subtask_label
+import simpletodo.composeapp.generated.resources.task_remove_subtask_cd
+import simpletodo.composeapp.generated.resources.task_new_subtask_default
+import simpletodo.composeapp.generated.resources.task_add_cd
+import simpletodo.composeapp.generated.resources.task_add_subtask
+import simpletodo.composeapp.generated.resources.task_subtask_default
+import simpletodo.composeapp.generated.resources.task_create
+import simpletodo.composeapp.generated.resources.task_save
+import simpletodo.composeapp.generated.resources.importance_low
+import simpletodo.composeapp.generated.resources.importance_normal
+import simpletodo.composeapp.generated.resources.importance_high
+import simpletodo.composeapp.generated.resources.importance_critical
+import simpletodo.composeapp.generated.resources.task_no_tag
+import simpletodo.composeapp.generated.resources.task_tag_select
+import simpletodo.composeapp.generated.resources.task_no_note
+import simpletodo.composeapp.generated.resources.task_note_label
+import simpletodo.composeapp.generated.resources.task_select_note
+import simpletodo.composeapp.generated.resources.search_placeholder
+import simpletodo.composeapp.generated.resources.task_close
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -106,6 +141,8 @@ fun TaskEditorSheet(
 
     val scope = rememberCoroutineScope()
     val scrollState = rememberScrollState()
+    val defaultSubtaskLabel = stringResource(Res.string.task_subtask_default)
+    val newSubtaskLabel = stringResource(Res.string.task_new_subtask_default)
 
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Box(
@@ -128,7 +165,7 @@ fun TaskEditorSheet(
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 Text(
-                                    if (initial == null) "New task" else "Edit task",
+                                    if (initial == null) stringResource(Res.string.task_editor_new) else stringResource(Res.string.task_editor_edit),
                                     style = MaterialTheme.typography.titleLarge,
                                     modifier = Modifier.align(Alignment.CenterVertically),
                                     textAlign = TextAlign.Center
@@ -137,21 +174,21 @@ fun TaskEditorSheet(
                                     onClick = onDismiss,
                                     modifier = Modifier.align(Alignment.CenterVertically)
                                 ) {
-                                    Icon(CloseIcon, contentDescription = "Close")
+                                    Icon(CloseIcon, contentDescription = stringResource(Res.string.task_close_cd))
                                 }
                             }
 
                             OutlinedTextField(
                                 value = title,
                                 onValueChange = { title = it },
-                                label = { Text("Task title") },
+                                label = { Text(stringResource(Res.string.task_title_label)) },
                                 modifier = Modifier.fillMaxWidth()
                             )
 
                             OutlinedTextField(
                                 value = plan,
                                 onValueChange = { plan = it },
-                                label = { Text("Plan / notes") },
+                                label = { Text(stringResource(Res.string.task_plan_label)) },
                                 modifier = Modifier.fillMaxWidth(),
                                 minLines = 3
                             )
@@ -161,7 +198,7 @@ fun TaskEditorSheet(
                                 modifier = Modifier.align(Alignment.CenterHorizontally)
                             ) {
                                 Text(
-                                    text = if (showAdvanced) "Hide details" else "Show details",
+                                    text = if (showAdvanced) stringResource(Res.string.task_hide_details) else stringResource(Res.string.task_show_details),
                                     style = MaterialTheme.typography.bodyMedium,
                                 )
                             }
@@ -173,7 +210,7 @@ fun TaskEditorSheet(
                             ) {
                                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                                     Text(
-                                        "Planned time to do",
+                                        stringResource(Res.string.task_planned_time_label),
                                         style = MaterialTheme.typography.titleMedium
                                     )
 
@@ -183,23 +220,23 @@ fun TaskEditorSheet(
                                     OutlinedTextField(
                                         value = estimateHoursText,
                                         onValueChange = { estimateHoursText = it },
-                                        label = { Text("Estimate time to complete (hours)") },
+                                        label = { Text(stringResource(Res.string.task_estimate_label)) },
                                         modifier = Modifier.fillMaxWidth()
                                     )
 
                                     Spacer(modifier = Modifier.height(8.dp))
-                                    Text("Deadline", style = MaterialTheme.typography.titleMedium)
+                                    Text(stringResource(Res.string.task_deadline_label), style = MaterialTheme.typography.titleMedium)
                                     PlatformDateTimePicker(
                                         current = deadline, onPicked = { deadline = it })
 
                                     Spacer(modifier = Modifier.height(8.dp))
-                                    Text("Priority", style = MaterialTheme.typography.titleMedium)
+                                    Text(stringResource(Res.string.task_priority_label), style = MaterialTheme.typography.titleMedium)
                                     ImportancePicker(
                                         current = importance,
                                         onPick = { importance = it })
 
                                     Spacer(modifier = Modifier.height(8.dp))
-                                    Text("Tag", style = MaterialTheme.typography.titleMedium)
+                                    Text(stringResource(Res.string.task_tag_label), style = MaterialTheme.typography.titleMedium)
                                     TagPicker(
                                         tags = prefsTagList,
                                         currentId = tagId,
@@ -207,7 +244,7 @@ fun TaskEditorSheet(
 
                                     Spacer(modifier = Modifier.height(8.dp))
                                     Text(
-                                        "Linked note",
+                                        stringResource(Res.string.task_linked_note_label),
                                         style = MaterialTheme.typography.titleMedium
                                     )
                                     NotePicker(
@@ -218,7 +255,7 @@ fun TaskEditorSheet(
                                     )
 
                                     Spacer(modifier = Modifier.height(8.dp))
-                                    Text("Subtasks", style = MaterialTheme.typography.titleMedium)
+                                    Text(stringResource(Res.string.home_subtasks), style = MaterialTheme.typography.titleMedium)
                                     Column(
                                         modifier = Modifier
                                             .fillMaxWidth()
@@ -245,7 +282,7 @@ fun TaskEditorSheet(
                                                             if (it.id == s.id) it.copy(text = text) else it
                                                         }
                                                     },
-                                                    label = { Text("Subtask ${idx + 1}") },
+                                                    label = { Text(stringResource(Res.string.task_subtask_label, (idx + 1).toString())) },
                                                     modifier = Modifier.weight(1f)
                                                 )
                                                 Spacer(Modifier.width(8.dp))
@@ -257,7 +294,7 @@ fun TaskEditorSheet(
                                                 ) {
                                                     Icon(
                                                         DeleteIcon,
-                                                        contentDescription = "Remove subtask"
+                                                        contentDescription = stringResource(Res.string.task_remove_subtask_cd)
                                                     )
                                                 }
                                             }
@@ -267,14 +304,14 @@ fun TaskEditorSheet(
                                             onClick = {
                                                 subtasks = subtasks + Subtask(
                                                     id = newId("sub"),
-                                                    text = "New subtask",
+                                                    text = newSubtaskLabel,
                                                     done = false
                                                 )
                                             }, modifier = Modifier.fillMaxWidth()
                                         ) {
-                                            Icon(AddIcon, contentDescription = "Add")
+                                            Icon(AddIcon, contentDescription = stringResource(Res.string.task_add_cd))
                                             Spacer(Modifier.width(8.dp))
-                                            Text("Add subtask")
+                                            Text(stringResource(Res.string.task_add_subtask))
                                         }
                                     }
                                 }
@@ -287,7 +324,7 @@ fun TaskEditorSheet(
 
                                     scope.launch {
                                         val cleanedSubtasks = subtasks.map {
-                                            val cleaned = it.text.trim().ifBlank { "Subtask" }
+                                            val cleaned = it.text.trim().ifBlank { defaultSubtaskLabel }
                                             it.copy(text = cleaned)
                                         }
                                         val estimateHours = estimateHoursText.toDoubleOrNull()
@@ -322,7 +359,7 @@ fun TaskEditorSheet(
                                     }
                                 }, modifier = Modifier.fillMaxWidth()
                             ) {
-                                Text(if (initial == null) "Create" else "Save")
+                                Text(if (initial == null) stringResource(Res.string.task_create) else stringResource(Res.string.task_save))
                             }
 
                             Spacer(modifier = Modifier.height(12.dp))
@@ -350,18 +387,19 @@ private fun ImportancePicker(current: Importance, onPick: (Importance) -> Unit) 
     }
 }
 
+@Composable
 private fun label(i: Importance): String = when (i) {
-    Importance.LOW -> "Low"
-    Importance.NORMAL -> "Normal"
-    Importance.HIGH -> "High"
-    Importance.CRITICAL -> "Critical"
+    Importance.LOW -> stringResource(Res.string.importance_low)
+    Importance.NORMAL -> stringResource(Res.string.importance_normal)
+    Importance.HIGH -> stringResource(Res.string.importance_high)
+    Importance.CRITICAL -> stringResource(Res.string.importance_critical)
 }
 
 @Composable
 @ExperimentalMaterial3Api
 private fun TagPicker(tags: List<Tag>, currentId: String?, onPick: (String?) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
-    val current = tags.firstOrNull { it.id == currentId }?.name ?: "No tag"
+    val current = tags.firstOrNull { it.id == currentId }?.name ?: stringResource(Res.string.task_no_tag)
 
     ExposedDropdownMenuBox(
         expanded = expanded, onExpandedChange = { expanded = !expanded }) {
@@ -369,14 +407,14 @@ private fun TagPicker(tags: List<Tag>, currentId: String?, onPick: (String?) -> 
             value = current,
             onValueChange = {},
             readOnly = true,
-            label = { Text("Tag") },
+            label = { Text(stringResource(Res.string.task_tag_select)) },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             modifier = Modifier.fillMaxWidth().menuAnchor()
         )
         ExposedDropdownMenu(
             expanded = expanded, onDismissRequest = { expanded = false }) {
             DropdownMenuItem(
-                text = { Text("No tag") },
+                text = { Text(stringResource(Res.string.task_no_tag)) },
                 onClick = { onPick(null); expanded = false })
             tags.forEach { t ->
                 DropdownMenuItem(
@@ -398,7 +436,7 @@ private fun NotePicker(
     var showDialog by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
     val focusRequester = remember { FocusRequester() }
-    val current = notes.firstOrNull { it.id == currentId }?.title ?: "No note"
+    val current = notes.firstOrNull { it.id == currentId }?.title ?: stringResource(Res.string.task_no_note)
     val filtered = remember(notes, query) {
         if (query.isBlank()) notes else notes.filter { it.title.contains(query, ignoreCase = true) }
     }
@@ -415,7 +453,7 @@ private fun NotePicker(
             onValueChange = {},
             readOnly = true,
             enabled = false,
-            label = { Text("Note") },
+            label = { Text(stringResource(Res.string.task_note_label)) },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = showDialog) },
             modifier = Modifier.fillMaxWidth(),
             colors = OutlinedTextFieldDefaults.colors(
@@ -430,13 +468,13 @@ private fun NotePicker(
     if (showDialog) {
         AlertDialog(
             onDismissRequest = { showDialog = false },
-            title = { Text("Select note") },
+            title = { Text(stringResource(Res.string.task_select_note)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
                         value = query,
                         onValueChange = { query = it },
-                        placeholder = { Text("Search...") },
+                        placeholder = { Text(stringResource(Res.string.search_placeholder)) },
                         modifier = Modifier.fillMaxWidth().focusRequester(focusRequester)
                     )
                     Box(Modifier.fillMaxWidth().heightIn(max = 260.dp)) {
@@ -446,7 +484,7 @@ private fun NotePicker(
                         ) {
                             item {
                                 DropdownMenuItem(
-                                    text = { Text("No note") },
+                                    text = { Text(stringResource(Res.string.task_no_note)) },
                                     onClick = {
                                         onPick(null)
                                         showDialog = false
@@ -475,7 +513,7 @@ private fun NotePicker(
                 }
             },
             confirmButton = {
-                TextButton(onClick = { showDialog = false }) { Text("Close") }
+                TextButton(onClick = { showDialog = false }) { Text(stringResource(Res.string.task_close)) }
             }
         )
         androidx.compose.runtime.LaunchedEffect(showDialog) {

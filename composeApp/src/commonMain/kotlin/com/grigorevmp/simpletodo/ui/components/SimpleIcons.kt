@@ -64,6 +64,7 @@ object SimpleIcons {
         }
     }.build()
 
+
     val Visibility: ImageVector = ImageVector.Builder(
         name = "Visibility",
         defaultWidth = 24.dp,

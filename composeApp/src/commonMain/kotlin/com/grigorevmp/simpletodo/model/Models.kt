@@ -90,6 +90,9 @@ data class NoteSortConfig(
 enum class ThemeMode { SYSTEM, DYNAMIC, DIM, AUTHOR }
 
 @Serializable
+enum class AppLanguage { SYSTEM, EN, RU }
+
+@Serializable
 data class AppPrefs(
     val remindersEnabled: Boolean = true,
     val reminderLeadMinutes: Int = 30,
@@ -102,6 +105,7 @@ data class AppPrefs(
     val disableDarkTheme: Boolean = false,
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val authorAccentIndex: Int = 0,
+    val language: AppLanguage = AppLanguage.SYSTEM,
     val tags: List<Tag> = listOf(
         Tag(id = "tag_work", name = "Work", colorIndex = 0),
         Tag(id = "tag_study", name = "Study", colorIndex = 1),

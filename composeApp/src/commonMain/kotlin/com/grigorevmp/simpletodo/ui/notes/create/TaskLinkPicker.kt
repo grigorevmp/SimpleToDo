@@ -32,6 +32,13 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.unit.dp
 import com.grigorevmp.simpletodo.model.TodoTask
 import com.grigorevmp.simpletodo.ui.components.FadingScrollEdges
+import org.jetbrains.compose.resources.stringResource
+import simpletodo.composeapp.generated.resources.Res
+import simpletodo.composeapp.generated.resources.task_link_label
+import simpletodo.composeapp.generated.resources.task_select_task
+import simpletodo.composeapp.generated.resources.search_placeholder
+import simpletodo.composeapp.generated.resources.task_no_task
+import simpletodo.composeapp.generated.resources.task_close
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -41,7 +48,7 @@ fun TaskLinkPicker(
     var showDialog by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
     val focusRequester = remember { FocusRequester() }
-    val current = tasks.firstOrNull { it.id == currentId }?.title ?: "No task"
+    val current = tasks.firstOrNull { it.id == currentId }?.title ?: stringResource(Res.string.task_no_task)
     val filtered = remember(tasks, query) {
         if (query.isBlank()) tasks else tasks.filter { it.title.contains(query, ignoreCase = true) }
     }
@@ -58,7 +65,7 @@ fun TaskLinkPicker(
             onValueChange = {},
             readOnly = true,
             enabled = false,
-            label = { Text("Linked task") },
+            label = { Text(stringResource(Res.string.task_link_label)) },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = showDialog) },
             modifier = Modifier.fillMaxWidth(),
             colors = OutlinedTextFieldDefaults.colors(
@@ -74,13 +81,13 @@ fun TaskLinkPicker(
     if (showDialog) {
         AlertDialog(
             onDismissRequest = { showDialog = false },
-            title = { Text("Select task") },
+            title = { Text(stringResource(Res.string.task_select_task)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
                         value = query,
                         onValueChange = { query = it },
-                        placeholder = { Text("Search...") },
+                        placeholder = { Text(stringResource(Res.string.search_placeholder)) },
                         modifier = Modifier.fillMaxWidth().focusRequester(focusRequester)
                     )
                     Box(Modifier.fillMaxWidth().heightIn(max = 260.dp)) {
@@ -88,7 +95,7 @@ fun TaskLinkPicker(
                             state = listState, modifier = Modifier.fillMaxWidth()
                         ) {
                             item {
-                                DropdownMenuItem(text = { Text("No task") }, onClick = {
+                                DropdownMenuItem(text = { Text(stringResource(Res.string.task_no_task)) }, onClick = {
                                     onPick(null)
                                     showDialog = false
                                 })
@@ -111,7 +118,7 @@ fun TaskLinkPicker(
                 }
             },
             confirmButton = {
-                TextButton(onClick = { showDialog = false }) { Text("Close") }
+                TextButton(onClick = { showDialog = false }) { Text(stringResource(Res.string.task_close)) }
             })
         LaunchedEffect(showDialog) {
             if (showDialog) focusRequester.requestFocus()

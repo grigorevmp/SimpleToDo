@@ -16,8 +16,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 
 @Composable
 fun FadingScrollEdges(
@@ -25,6 +27,7 @@ fun FadingScrollEdges(
     modifier: Modifier = Modifier,
     height: Dp = 28.dp,
     color: Color = MaterialTheme.colorScheme.background,
+    maxAlpha: Float = 0.95f,
     enabled: Boolean = true
 ) {
     if (!enabled) return
@@ -40,7 +43,8 @@ fun FadingScrollEdges(
         showBottom = showBottom,
         modifier = modifier,
         height = height,
-        color = color
+        color = color,
+        maxAlpha = maxAlpha
     )
 }
 
@@ -50,6 +54,7 @@ fun FadingScrollEdges(
     modifier: Modifier = Modifier,
     height: Dp = 28.dp,
     color: Color = MaterialTheme.colorScheme.background,
+    maxAlpha: Float = 0.95f,
     enabled: Boolean = true
 ) {
     if (!enabled) return
@@ -76,7 +81,35 @@ fun FadingScrollEdges(
         showBottom = showBottom,
         modifier = modifier,
         height = height,
-        color = color
+        color = color,
+        maxAlpha = maxAlpha
+    )
+}
+
+@Composable
+fun FadingScrollEdgesHorizontal(
+    scrollState: ScrollState,
+    modifier: Modifier = Modifier,
+    width: Dp = 36.dp,
+    color: Color = MaterialTheme.colorScheme.background,
+    maxAlpha: Float = 0.95f,
+    enabled: Boolean = true
+) {
+    if (!enabled) return
+    val showStart by remember(scrollState) {
+        derivedStateOf { scrollState.value > 0 }
+    }
+    val showEnd by remember(scrollState) {
+        derivedStateOf { scrollState.value < scrollState.maxValue }
+    }
+
+    FadingScrollEdgesHorizontal(
+        showStart = showStart,
+        showEnd = showEnd,
+        modifier = modifier,
+        width = width,
+        color = color,
+        maxAlpha = maxAlpha
     )
 }
 
@@ -86,7 +119,8 @@ private fun FadingScrollEdges(
     showBottom: Boolean,
     modifier: Modifier = Modifier,
     height: Dp = 28.dp,
-    color: Color = MaterialTheme.colorScheme.background
+    color: Color = MaterialTheme.colorScheme.background,
+    maxAlpha: Float = 0.95f
 ) {
     val topAlpha by animateFloatAsState(
         targetValue = if (showTop) 1f else 0f,
@@ -105,7 +139,8 @@ private fun FadingScrollEdges(
                 .background(
                     Brush.verticalGradient(
                         listOf(
-                            color.copy(alpha = 0.9f * topAlpha),
+                            color.copy(alpha = maxAlpha * topAlpha),
+                            color.copy(alpha = maxAlpha * topAlpha * 0.35f),
                             color.copy(alpha = 0f)
                         )
                     )
@@ -120,7 +155,59 @@ private fun FadingScrollEdges(
                     Brush.verticalGradient(
                         listOf(
                             color.copy(alpha = 0f),
-                            color.copy(alpha = 0.9f * bottomAlpha)
+                            color.copy(alpha = maxAlpha * bottomAlpha * 0.35f),
+                            color.copy(alpha = maxAlpha * bottomAlpha)
+                        )
+                    )
+                )
+        )
+    }
+}
+
+@Composable
+private fun FadingScrollEdgesHorizontal(
+    showStart: Boolean,
+    showEnd: Boolean,
+    modifier: Modifier = Modifier,
+    width: Dp = 36.dp,
+    color: Color = MaterialTheme.colorScheme.background,
+    maxAlpha: Float = 0.95f
+) {
+    val startAlpha by animateFloatAsState(
+        targetValue = if (showStart) 1f else 0f,
+        label = "fade-start"
+    )
+    val endAlpha by animateFloatAsState(
+        targetValue = if (showEnd) 1f else 0f,
+        label = "fade-end"
+    )
+
+    Box(modifier = modifier) {
+        Box(
+            Modifier
+                .fillMaxHeight()
+                .width(width)
+                .background(
+                    Brush.horizontalGradient(
+                        listOf(
+                            color.copy(alpha = maxAlpha * startAlpha),
+                            color.copy(alpha = maxAlpha * startAlpha * 0.35f),
+                            color.copy(alpha = 0f)
+                        )
+                    )
+                )
+        )
+        Box(
+            Modifier
+                .fillMaxHeight()
+                .width(width)
+                .align(Alignment.CenterEnd)
+                .background(
+                    Brush.horizontalGradient(
+                        listOf(
+                            color.copy(alpha = 0f),
+                            color.copy(alpha = maxAlpha * endAlpha * 0.35f),
+                            color.copy(alpha = maxAlpha * endAlpha)
                         )
                     )
                 )

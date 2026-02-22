@@ -18,6 +18,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import org.jetbrains.compose.resources.stringResource
+import simpletodo.composeapp.generated.resources.Res
+import simpletodo.composeapp.generated.resources.notifications_android_legacy
+import simpletodo.composeapp.generated.resources.notifications_allow
+import simpletodo.composeapp.generated.resources.notifications_allow_body
+import simpletodo.composeapp.generated.resources.notifications_allow_title
 
 @Composable
 actual fun NotificationPermissionGate(remindersEnabled: Boolean) {
@@ -25,7 +31,7 @@ actual fun NotificationPermissionGate(remindersEnabled: Boolean) {
 
     if (Build.VERSION.SDK_INT < 33) {
         Text(
-            "Android < 13 does not require permission.",
+            stringResource(Res.string.notifications_android_legacy),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -54,23 +60,17 @@ actual fun NotificationPermissionGate(remindersEnabled: Boolean) {
             Column(
                 Modifier.fillMaxWidth().padding(12.dp)
             ) {
-                Text("Notification permission needed", style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(Res.string.notifications_allow_title), style = MaterialTheme.typography.titleMedium)
                 Text(
-                    "Allow notifications so reminders arrive on time.",
+                    stringResource(Res.string.notifications_allow_body),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Button(
                     onClick = { launcher.launch(Manifest.permission.POST_NOTIFICATIONS) },
                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
-                ) { Text("Allow") }
+                ) { Text(stringResource(Res.string.notifications_allow)) }
             }
         }
-    } else {
-        Text(
-            "Notification permission granted.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
     }
 }

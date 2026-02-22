@@ -34,7 +34,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -62,12 +61,12 @@ import com.grigorevmp.simpletodo.ui.components.FadingScrollEdges
 import com.grigorevmp.simpletodo.ui.components.AppIconId
 import com.grigorevmp.simpletodo.ui.components.PlatformIcon
 import androidx.compose.material3.LocalContentColor
+import androidx.compose.ui.graphics.luminance
 import com.grigorevmp.simpletodo.ui.components.FolderIcon
 import com.grigorevmp.simpletodo.ui.components.NoteIcon
 import com.grigorevmp.simpletodo.ui.components.SimpleIcons
 import com.grigorevmp.simpletodo.platform.isIos
 import com.grigorevmp.simpletodo.platform.PlatformBackHandler
-import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.kyant.backdrop.drawBackdrop
 import com.kyant.backdrop.effects.blur
@@ -78,6 +77,36 @@ import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
 import simpletodo.composeapp.generated.resources.Res
 import simpletodo.composeapp.generated.resources.notes
+import org.jetbrains.compose.resources.stringResource
+import simpletodo.composeapp.generated.resources.notes_title
+import simpletodo.composeapp.generated.resources.notes_edit_folder_title
+import simpletodo.composeapp.generated.resources.notes_folder_name_label
+import simpletodo.composeapp.generated.resources.notes_save
+import simpletodo.composeapp.generated.resources.notes_delete
+import simpletodo.composeapp.generated.resources.notes_delete_folder_title
+import simpletodo.composeapp.generated.resources.notes_delete_folder_desc
+import simpletodo.composeapp.generated.resources.notes_cancel
+import simpletodo.composeapp.generated.resources.notes_filter_cd
+import simpletodo.composeapp.generated.resources.notes_folder_cd
+import simpletodo.composeapp.generated.resources.notes_note_cd
+import simpletodo.composeapp.generated.resources.notes_favorite_cd
+import simpletodo.composeapp.generated.resources.notes_folder_note_count
+import simpletodo.composeapp.generated.resources.notes_linked_one
+import simpletodo.composeapp.generated.resources.notes_linked_many
+import simpletodo.composeapp.generated.resources.notes_favorite_add
+import simpletodo.composeapp.generated.resources.notes_favorite_remove
+import simpletodo.composeapp.generated.resources.notes_empty_folder
+import simpletodo.composeapp.generated.resources.notes_empty_root
+import simpletodo.composeapp.generated.resources.notes_empty_folder_desc
+import simpletodo.composeapp.generated.resources.notes_empty_root_desc
+import simpletodo.composeapp.generated.resources.notes_add_folder
+import simpletodo.composeapp.generated.resources.notes_back
+import simpletodo.composeapp.generated.resources.notes_new_folder_title
+import simpletodo.composeapp.generated.resources.notes_create
+import simpletodo.composeapp.generated.resources.notes_favorites_title
+import simpletodo.composeapp.generated.resources.notes_count
+import simpletodo.composeapp.generated.resources.notes_expand_cd
+import simpletodo.composeapp.generated.resources.notes_collapse_cd
 
 @Composable
 fun NotesScreen(
@@ -151,8 +180,12 @@ fun NotesScreen(
         currentFolderId = parent
     }
 
-    PlatformBackHandler(enabled = currentFolderId != null && !showEditor) {
-        navigateBack()
+    PlatformBackHandler(enabled = showEditor || currentFolderId != null) {
+        if (showEditor) {
+            showEditor = false
+        } else {
+            navigateBack()
+        }
     }
 
     val listBackdrop = rememberLayerBackdrop {
@@ -195,7 +228,7 @@ fun NotesScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 BreadcrumbItem(
-                    text = "Notes",
+                    text = stringResource(Res.string.notes_title),
                     active = path.isEmpty(),
                     onClick = { currentFolderId = null }
                 )
@@ -350,12 +383,12 @@ fun NotesScreen(
     folderAction?.let { folder ->
         AlertDialog(
             onDismissRequest = { folderAction = null },
-            title = { Text("Edit folder") },
+            title = { Text(stringResource(Res.string.notes_edit_folder_title)) },
             text = {
                 OutlinedTextField(
                     value = editFolderName,
                     onValueChange = { editFolderName = it },
-                    label = { Text("Folder name") },
+                    label = { Text(stringResource(Res.string.notes_folder_name_label)) },
                     modifier = Modifier.fillMaxWidth()
                 )
             },
@@ -367,7 +400,7 @@ fun NotesScreen(
                         scope.launch { repo.renameFolder(folder.id, name) }
                         folderAction = null
                     }
-                ) { Text("Save") }
+                ) { Text(stringResource(Res.string.notes_save)) }
             },
             dismissButton = {
                 TextButton(
@@ -376,7 +409,7 @@ fun NotesScreen(
                         deleteFolderId = folder.id
                         folderAction = null
                     }
-                ) { Text("Delete") }
+                ) { Text(stringResource(Res.string.notes_delete)) }
             }
         )
     }
@@ -384,8 +417,8 @@ fun NotesScreen(
     if (showDeleteFolder) {
         AlertDialog(
             onDismissRequest = { showDeleteFolder = false },
-            title = { Text("Delete folder?") },
-            text = { Text("All notes inside will be moved to the root.") },
+            title = { Text(stringResource(Res.string.notes_delete_folder_title)) },
+            text = { Text(stringResource(Res.string.notes_delete_folder_desc)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -394,10 +427,12 @@ fun NotesScreen(
                         showDeleteFolder = false
                         deleteFolderId = null
                     }
-                ) { Text("Delete") }
+                ) { Text(stringResource(Res.string.notes_delete)) }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteFolder = false; deleteFolderId = null }) { Text("Cancel") }
+                TextButton(onClick = { showDeleteFolder = false; deleteFolderId = null }) {
+                    Text(stringResource(Res.string.notes_cancel))
+                }
             }
         )
     }
@@ -405,7 +440,7 @@ fun NotesScreen(
 
 @Composable
 private fun NotesTopBar(path: List<NoteFolder>, onSort: () -> Unit) {
-    val title = if (path.isEmpty()) "Notes" else path.last().name
+    val title = if (path.isEmpty()) stringResource(Res.string.notes_title) else path.last().name
     Row(
         Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -415,7 +450,7 @@ private fun NotesTopBar(path: List<NoteFolder>, onSort: () -> Unit) {
         IconButton(onClick = onSort) {
             PlatformIcon(
                 id = AppIconId.Filter,
-                contentDescription = "Filter",
+                contentDescription = stringResource(Res.string.notes_filter_cd),
                 tint = LocalContentColor.current,
                 modifier = Modifier.size(22.dp)
             )
@@ -444,7 +479,7 @@ private fun FolderRow(
         ) {
             Icon(
                 FolderIcon,
-                contentDescription = "Folder",
+                contentDescription = stringResource(Res.string.notes_folder_cd),
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(22.dp)
             )
@@ -452,7 +487,7 @@ private fun FolderRow(
             Column(Modifier.weight(1f)) {
                 Text(folder.name, style = MaterialTheme.typography.titleMedium)
                 Text(
-                    "$folderCount folders • $noteCount notes",
+                    stringResource(Res.string.notes_folder_note_count, folderCount.toString(), noteCount.toString()),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -477,6 +512,7 @@ private fun NoteRow(
             color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
             modifier = Modifier
                 .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
                 .combinedClickable(
                     onClick = onOpen,
                     onLongClick = { showActions = true }
@@ -494,7 +530,7 @@ private fun NoteRow(
                 val noteTint = MaterialTheme.colorScheme.primary
                 Icon(
                     painter = notePainter,
-                    contentDescription = "Note",
+                    contentDescription = stringResource(Res.string.notes_note_cd),
                     tint = noteTint,
                     modifier = Modifier.size(22.dp)
                 )
@@ -518,9 +554,9 @@ private fun NoteRow(
                     }
                     if (linkedTasks.isNotEmpty()) {
                         val label = if (linkedTasks.size == 1) {
-                            "Linked: ${linkedTasks.first().title}"
+                            stringResource(Res.string.notes_linked_one, linkedTasks.first().title)
                         } else {
-                            "Linked tasks: ${linkedTasks.size}"
+                            stringResource(Res.string.notes_linked_many, linkedTasks.size.toString())
                         }
                         Text(
                             label,
@@ -534,7 +570,7 @@ private fun NoteRow(
                 if (note.favorite) {
                     Icon(
                         imageVector = SimpleIcons.Star,
-                        contentDescription = "Favorite",
+                        contentDescription = stringResource(Res.string.notes_favorite_cd),
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(18.dp)
                     )
@@ -549,14 +585,22 @@ private fun NoteRow(
             tonalElevation = 2.dp
         ) {
             DropdownMenuItem(
-                text = { Text(if (note.favorite) "Remove from favorites" else "Add to favorites") },
+                text = {
+                    Text(
+                        if (note.favorite) {
+                            stringResource(Res.string.notes_favorite_remove)
+                        } else {
+                            stringResource(Res.string.notes_favorite_add)
+                        }
+                    )
+                },
                 onClick = {
                     showActions = false
                     onToggleFavorite()
                 }
             )
             DropdownMenuItem(
-                text = { Text("Delete") },
+                text = { Text(stringResource(Res.string.notes_delete)) },
                 onClick = {
                     showActions = false
                     onDelete()
@@ -574,15 +618,15 @@ private fun EmptyNotesState(inFolder: Boolean) {
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            if (inFolder) "Folder is empty." else "No notes yet.",
+            if (inFolder) stringResource(Res.string.notes_empty_folder) else stringResource(Res.string.notes_empty_root),
             style = MaterialTheme.typography.titleMedium
         )
         Spacer(Modifier.height(8.dp))
         Text(
             if (inFolder) {
-                "Create a note or a subfolder to organize your ideas."
+                stringResource(Res.string.notes_empty_folder_desc)
             } else {
-                "Create your first note or add folders to organize." 
+                stringResource(Res.string.notes_empty_root_desc)
             },
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -609,6 +653,12 @@ private fun NotesActionBar(
     val blurPx = with(density) { 3.dp.toPx() }
     val lensInnerPx = with(density) { 10.dp.toPx() }
     val lensOuterPx = with(density) { 20.dp.toPx() }
+    val isDarkSurface = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val glassOverlay = if (isDarkSurface) {
+        Color.Black.copy(alpha = 0.5f)
+    } else {
+        Color.White.copy(alpha = 0.35f)
+    }
 
     Box(modifier = modifier
         .padding(bottom = 8.dp),
@@ -629,6 +679,7 @@ private fun NotesActionBar(
                             },
                             onDrawSurface = {
                                 drawRect(containerBrush)
+                                drawRect(glassOverlay)
                             }
                         )
                     } else {
@@ -652,7 +703,7 @@ private fun NotesActionBar(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            "Add Folder",
+                            stringResource(Res.string.notes_add_folder),
                             style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.onSurface
                         )
@@ -682,6 +733,12 @@ private fun BackActionButton(
     val blurPx = with(density) { 3.dp.toPx() }
     val lensInnerPx = with(density) { 10.dp.toPx() }
     val lensOuterPx = with(density) { 20.dp.toPx() }
+    val isDarkSurface = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val glassOverlay = if (isDarkSurface) {
+        Color.Black.copy(alpha = 0.5f)
+    } else {
+        Color.White.copy(alpha = 0.35f)
+    }
 
     Box(
         modifier = modifier
@@ -703,6 +760,7 @@ private fun BackActionButton(
                             },
                             onDrawSurface = {
                                 drawRect(containerBrush)
+                                drawRect(glassOverlay)
                             }
                         )
                     } else {
@@ -726,7 +784,7 @@ private fun BackActionButton(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            "Back",
+                            stringResource(Res.string.notes_back),
                             style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.onSurface
                         )
@@ -753,17 +811,17 @@ private fun NewFolderRow(
             Modifier.fillMaxWidth().padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text("New folder", style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(Res.string.notes_new_folder_title), style = MaterialTheme.typography.titleMedium)
             OutlinedTextField(
                 value = name,
                 onValueChange = onNameChange,
-                label = { Text("Folder name") },
+                label = { Text(stringResource(Res.string.notes_folder_name_label)) },
                 modifier = Modifier.fillMaxWidth()
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TextButton(onClick = onCancel) { Text("Cancel") }
+                TextButton(onClick = onCancel) { Text(stringResource(Res.string.notes_cancel)) }
                 Spacer(modifier = Modifier.weight(1f))
-                TextButton(onClick = onCreate) { Text("Create") }
+                TextButton(onClick = onCreate) { Text(stringResource(Res.string.notes_create)) }
             }
         }
     }
@@ -788,16 +846,20 @@ private fun FavoriteNotesSection(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Column {
-                Text("Favorites", style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(Res.string.notes_favorites_title), style = MaterialTheme.typography.titleMedium)
                 Text(
-                    "${notes.size} notes",
+                    stringResource(Res.string.notes_count, notes.size.toString()),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             Icon(
                 imageVector = if (expanded) SimpleIcons.ArrowUp else SimpleIcons.ArrowDown,
-                contentDescription = if (expanded) "Collapse" else "Expand",
+                contentDescription = if (expanded) {
+                    stringResource(Res.string.notes_collapse_cd)
+                } else {
+                    stringResource(Res.string.notes_expand_cd)
+                },
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(18.dp)
             )

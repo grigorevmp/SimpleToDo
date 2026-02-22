@@ -1,33 +1,34 @@
 package com.grigorevmp.simpletodo.ui.components
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.wrapContentWidth
-import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.spring
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
@@ -37,6 +38,11 @@ import com.kyant.backdrop.drawBackdrop
 import com.kyant.backdrop.effects.blur
 import com.kyant.backdrop.effects.lens
 import com.kyant.backdrop.effects.vibrancy
+import org.jetbrains.compose.resources.stringResource
+import simpletodo.composeapp.generated.resources.Res
+import simpletodo.composeapp.generated.resources.nav_home
+import simpletodo.composeapp.generated.resources.nav_notes
+import simpletodo.composeapp.generated.resources.nav_settings
 
 enum class AppTab { HOME, NOTES, SETTINGS }
 
@@ -91,7 +97,7 @@ fun FloatingNavBar(
     ) {
         Box(
             Modifier
-                .height(64.dp)
+                .height(72.dp)
         ) {
             Box(
                 Modifier
@@ -121,6 +127,7 @@ fun FloatingNavBar(
             Row(
                 Modifier
                     .wrapContentWidth()
+                    .align(Alignment.Center)
                     .padding(horizontal = 8.dp, vertical = 6.dp)
                     .animateContentSize(animationSpec = spring(dampingRatio = 0.85f, stiffness = 520f)),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -128,23 +135,44 @@ fun FloatingNavBar(
             ) {
                 NavButton(
                     selected = tab == AppTab.HOME,
-                    label = "Home",
+                    label = stringResource(Res.string.nav_home),
                     onClick = { onTab(AppTab.HOME) },
-                    icon = { Icon(HomeIcon, contentDescription = "Home", tint = if (tab == AppTab.HOME) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant) }
+                    icon = {
+                        Icon(
+                            HomeIcon,
+                            contentDescription = stringResource(Res.string.nav_home),
+                            tint = if (tab == AppTab.HOME) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(vertical = 12.dp)
+                        )
+                    }
                 )
 
                 NavButton(
                     selected = tab == AppTab.NOTES,
-                    label = "Notes",
+                    label = stringResource(Res.string.nav_notes),
                     onClick = { onTab(AppTab.NOTES) },
-                    icon = { Icon(NotesIcon, contentDescription = "Notes", tint = if (tab == AppTab.NOTES) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant) }
+                    icon = {
+                        Icon(
+                            NotesIcon,
+                            contentDescription = stringResource(Res.string.nav_notes),
+                            tint = if (tab == AppTab.NOTES) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(vertical = 12.dp)
+                        )
+                    }
                 )
 
                 NavButton(
                     selected = tab == AppTab.SETTINGS,
-                    label = "Settings",
+                    label = stringResource(Res.string.nav_settings),
                     onClick = { onTab(AppTab.SETTINGS) },
-                    icon = { Icon(SettingsIcon, contentDescription = "Settings", tint = if (tab == AppTab.SETTINGS) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant) }
+                    icon = {
+                        Icon(
+                            SettingsIcon,
+                            contentDescription = stringResource(Res.string.nav_settings),
+                            tint = if (tab == AppTab.SETTINGS) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(vertical = 12.dp)
+                        )
+                    }
                 )
 
                 createActions.forEach { action ->
@@ -168,22 +196,35 @@ private fun NavButton(
     onClick: () -> Unit,
     icon: @Composable () -> Unit
 ) {
-    val bg = if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.14f) else Color.Transparent
+    val active by animateFloatAsState(
+        targetValue = if (selected) 1f else 0f,
+        animationSpec = tween(durationMillis = 180),
+        label = "nav-active"
+    )
+    val bg = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f * active)
     val fg = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+    val scale = 0.98f + 0.02f * active
 
     Surface(
         onClick = onClick,
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(48.dp),
         color = bg,
-        modifier = Modifier.width(72.dp)
+        modifier = Modifier
+            .width(72.dp)
+            .graphicsLayer(scaleX = scale, scaleY = scale)
     ) {
         Column(
             Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             icon()
-            Spacer(Modifier.height(4.dp))
-            Text(label, color = fg, style = MaterialTheme.typography.labelLarge)
+//            Spacer(Modifier.height(4.dp))
+//            Text(
+//                label,
+//                color = fg,
+//                style = MaterialTheme.typography.labelLarge,
+//                maxLines = 1
+//            )
         }
     }
 }
@@ -192,7 +233,7 @@ private fun NavButton(
 private fun CreateActionButton(action: CreateAction) {
     Surface(
         onClick = action.onClick,
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(48.dp),
         color = MaterialTheme.colorScheme.primary,
         modifier = Modifier.width(72.dp)
     ) {
@@ -203,14 +244,15 @@ private fun CreateActionButton(action: CreateAction) {
             Icon(
                 action.icon,
                 contentDescription = action.contentDescription,
-                tint = MaterialTheme.colorScheme.onPrimary
+                tint = MaterialTheme.colorScheme.onPrimary,
+                modifier = Modifier.padding(vertical = 12.dp)
             )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                action.label,
-                color = MaterialTheme.colorScheme.onPrimary,
-                style = MaterialTheme.typography.labelLarge
-            )
+//            Spacer(Modifier.height(4.dp))
+//            Text(
+//                action.label,
+//                color = MaterialTheme.colorScheme.onPrimary,
+//                style = MaterialTheme.typography.labelLarge
+//            )
         }
     }
 }

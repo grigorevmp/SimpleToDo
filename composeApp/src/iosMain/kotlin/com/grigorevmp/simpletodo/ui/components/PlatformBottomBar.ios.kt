@@ -42,6 +42,11 @@ import com.kyant.backdrop.drawBackdrop
 import com.kyant.backdrop.effects.blur
 import com.kyant.backdrop.effects.lens
 import com.kyant.backdrop.effects.vibrancy
+import org.jetbrains.compose.resources.stringResource
+import simpletodo.composeapp.generated.resources.Res
+import simpletodo.composeapp.generated.resources.nav_home
+import simpletodo.composeapp.generated.resources.nav_notes
+import simpletodo.composeapp.generated.resources.nav_settings
 
 @Composable
 actual fun PlatformBottomBar(
@@ -74,21 +79,21 @@ actual fun PlatformBottomBar(
     val items = listOf(
         IosTabItem(
             id = "home",
-            label = "Home",
+            label = stringResource(Res.string.nav_home),
             selected = tab == AppTab.HOME,
             icon = AppIconId.Home,
             onClick = { onTab(AppTab.HOME) }
         ),
         IosTabItem(
             id = "notes",
-            label = "Notes",
+            label = stringResource(Res.string.nav_notes),
             selected = tab == AppTab.NOTES,
             icon = AppIconId.Notes,
             onClick = { onTab(AppTab.NOTES) }
         ),
         IosTabItem(
             id = "settings",
-            label = "Settings",
+            label = stringResource(Res.string.nav_settings),
             selected = tab == AppTab.SETTINGS,
             icon = AppIconId.Settings,
             onClick = { onTab(AppTab.SETTINGS) }
@@ -106,7 +111,7 @@ actual fun PlatformBottomBar(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(64.dp)
+                .height(72.dp)
         ) {
             Box(
                 Modifier
@@ -130,7 +135,7 @@ actual fun PlatformBottomBar(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(64.dp)
+                    .height(72.dp)
                     .padding(horizontal = 8.dp, vertical = 6.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically

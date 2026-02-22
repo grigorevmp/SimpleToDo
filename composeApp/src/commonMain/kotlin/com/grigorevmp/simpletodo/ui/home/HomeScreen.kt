@@ -8,10 +8,12 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -21,84 +23,124 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.withFrameNanos
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.IntSize
-import kotlinx.coroutines.isActive
-import kotlin.random.Random
+import androidx.compose.ui.unit.dp
 import com.grigorevmp.simpletodo.data.TodoRepository
 import com.grigorevmp.simpletodo.model.Importance
 import com.grigorevmp.simpletodo.model.Note
 import com.grigorevmp.simpletodo.model.Tag
 import com.grigorevmp.simpletodo.model.TodoTask
-import com.grigorevmp.simpletodo.ui.components.ChromeDinoMascot
-import com.grigorevmp.simpletodo.ui.components.AtomSimpleIcon
+import com.grigorevmp.simpletodo.platform.isIos
 import com.grigorevmp.simpletodo.ui.components.AppIconId
-import com.grigorevmp.simpletodo.ui.components.FadingScrollEdges
-import com.grigorevmp.simpletodo.ui.components.PlatformIcon
-import com.grigorevmp.simpletodo.ui.components.NoteIcon
-import com.grigorevmp.simpletodo.ui.components.FlameIcon
-import com.grigorevmp.simpletodo.ui.components.SimpleIcons
-import com.grigorevmp.simpletodo.ui.components.itemPlacement
+import com.grigorevmp.simpletodo.ui.components.AtomSpinnerIcon
+import com.grigorevmp.simpletodo.ui.components.ChromeDinoMascot
 import com.grigorevmp.simpletodo.ui.components.CircleCheckbox
+import com.grigorevmp.simpletodo.ui.components.FadingScrollEdges
+import com.grigorevmp.simpletodo.ui.components.FadingScrollEdgesHorizontal
+import com.grigorevmp.simpletodo.ui.components.FlameIcon
+import com.grigorevmp.simpletodo.ui.components.NoteIcon
+import com.grigorevmp.simpletodo.ui.components.PlatformIcon
+import com.grigorevmp.simpletodo.ui.components.itemPlacement
 import com.grigorevmp.simpletodo.ui.home.components.SegmentedTabs
+import com.grigorevmp.simpletodo.ui.home.components.calendar.CalendarTab
 import com.grigorevmp.simpletodo.ui.notes.MarkdownText
 import com.grigorevmp.simpletodo.util.dateKey
 import com.grigorevmp.simpletodo.util.formatDeadline
 import com.grigorevmp.simpletodo.util.nowInstant
-import com.grigorevmp.simpletodo.platform.isIos
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
-import kotlinx.datetime.Instant
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.datetime.Instant
+import org.jetbrains.compose.resources.stringResource
+import simpletodo.composeapp.generated.resources.Res
+import simpletodo.composeapp.generated.resources.home_date_due
+import simpletodo.composeapp.generated.resources.home_date_planned
+import simpletodo.composeapp.generated.resources.home_dates_title
+import simpletodo.composeapp.generated.resources.home_details
+import simpletodo.composeapp.generated.resources.home_empty_inbox_body
+import simpletodo.composeapp.generated.resources.home_empty_inbox_title
+import simpletodo.composeapp.generated.resources.home_estimate
+import simpletodo.composeapp.generated.resources.home_favorite_notes
+import simpletodo.composeapp.generated.resources.home_filter_cd
+import simpletodo.composeapp.generated.resources.home_in_days
+import simpletodo.composeapp.generated.resources.home_motivation_1
+import simpletodo.composeapp.generated.resources.home_motivation_2
+import simpletodo.composeapp.generated.resources.home_motivation_3
+import simpletodo.composeapp.generated.resources.home_motivation_4
+import simpletodo.composeapp.generated.resources.home_motivation_5
+import simpletodo.composeapp.generated.resources.home_motivation_6
+import simpletodo.composeapp.generated.resources.home_no_content
+import simpletodo.composeapp.generated.resources.home_no_deadline
+import simpletodo.composeapp.generated.resources.home_note_plural
+import simpletodo.composeapp.generated.resources.home_note_singular
+import simpletodo.composeapp.generated.resources.home_notes_linked_to
+import simpletodo.composeapp.generated.resources.home_notes_title
+import simpletodo.composeapp.generated.resources.home_overdue
+import simpletodo.composeapp.generated.resources.home_planned_earlier
+import simpletodo.composeapp.generated.resources.home_subtasks
+import simpletodo.composeapp.generated.resources.home_tag_all
+import simpletodo.composeapp.generated.resources.home_tag_none
+import simpletodo.composeapp.generated.resources.home_tags_cd
+import simpletodo.composeapp.generated.resources.home_untitled
+import simpletodo.composeapp.generated.resources.hours_short
+import simpletodo.composeapp.generated.resources.tab_calendar
+import simpletodo.composeapp.generated.resources.tab_inbox
+import simpletodo.composeapp.generated.resources.tab_timeline
+import kotlin.math.PI
+import kotlin.math.abs
+import kotlin.math.cos
 import kotlin.math.roundToInt
+import kotlin.math.sin
+import kotlin.math.sqrt
+import kotlin.random.Random
 
-private enum class HomeTab { TIMELINE, INBOX }
+private enum class HomeTab { TIMELINE, CALENDAR, INBOX }
 
 @Composable
 fun HomeScreen(
@@ -110,12 +152,22 @@ fun HomeScreen(
     val tasks by repo.tasks.collectAsState()
     val notes by repo.notes.collectAsState()
     val links by repo.taskNoteLinks.collectAsState()
-    val prefs by repo.prefs.collectAsState() 
+    val prefs by repo.prefs.collectAsState()
     val scope = rememberCoroutineScope()
 
     val sorted = remember(tasks, prefs) { repo.sortedTasks(tasks, prefs) }
+    val motivations = listOf(
+        stringResource(Res.string.home_motivation_1),
+        stringResource(Res.string.home_motivation_2),
+        stringResource(Res.string.home_motivation_3),
+        stringResource(Res.string.home_motivation_4),
+        stringResource(Res.string.home_motivation_5),
+        stringResource(Res.string.home_motivation_6)
+    )
+    val motivation = remember(motivations) { motivations.random() }
     val notesById = remember(notes) { notes.associateBy { it.id } }
-    val favoriteNotes = remember(notes) { notes.filter { it.favorite }.sortedByDescending { it.updatedAt } }
+    val favoriteNotes =
+        remember(notes) { notes.filter { it.favorite }.sortedByDescending { it.updatedAt } }
 
     var showEditor by remember { mutableStateOf(false) }
     var editTask by remember { mutableStateOf<TodoTask?>(null) }
@@ -155,7 +207,7 @@ fun HomeScreen(
         return list
     }
 
-    androidx.compose.runtime.LaunchedEffect(createSignal) {
+    LaunchedEffect(createSignal) {
         if (createSignal > 0) {
             editTask = null
             showEditor = true
@@ -164,18 +216,21 @@ fun HomeScreen(
     }
 
     Box(Modifier.fillMaxSize()) {
-        CelebrationVolley(
-            trigger = celebrationTrigger.intValue,
-            modifier = Modifier.matchParentSize()
-        )
+        if (tab != HomeTab.CALENDAR) {
+            CelebrationVolley(
+                trigger = celebrationTrigger.intValue,
+                modifier = Modifier.matchParentSize()
+            )
+        }
         Column(Modifier.fillMaxSize()) {
             TopBar(
                 tagsShown = prefs.showTagFilters,
+                motivation = motivation,
                 onSort = { showSort = true },
                 onToggleTags = { scope.launch { repo.setShowTagFilters(!prefs.showTagFilters) } }
             )
 
-            AnimatedVisibility (prefs.showTagFilters) {
+            AnimatedVisibility(prefs.showTagFilters) {
                 TagFilters(
                     selectedTagId = tagFilter,
                     tags = prefs.tags,
@@ -198,103 +253,155 @@ fun HomeScreen(
                 ) { target ->
                     when (target) {
                         HomeTab.TIMELINE -> {
-                            if (timelineTasks.isEmpty() && favoriteNotes.isEmpty()) {
-                                EmptyState(
-                                    "No timeline tasks.",
-                                    "Add a task with a deadline to see it on the timeline.",
-                                    showMascot = true
-                                )
+                            val timelineHasVisible = if (prefs.showCompletedTasks) {
+                                timelineTasks.isNotEmpty()
                             } else {
-                                    TimelineList(
-                                        tasks = timelineTasks,
-                                        favoriteNotes = favoriteNotes,
-                                        onToggleDone = { id ->
-                                            val t = tasks.firstOrNull { it.id == id }
-                                            if (t != null && !t.done) {
-                                                celebrationTrigger.intValue += 1
-                                            }
-                                            scope.launch { repo.toggleDone(id) }
-                                        },
-                                        onToggleSub = { taskId, subId ->
-                                            scope.launch {
-                                                repo.toggleSubtask(
-                                                    taskId,
-                                                    subId
-                                                )
-                                            }
-                                        },
-                                        onEdit = { t -> editTask = t; showEditor = true },
-                                        onDelete = { id -> scope.launch { repo.deleteTask(id) } },
-                                        onClearCompleted = { scope.launch { repo.clearCompletedTasks() } },
-                                        showCompleted = prefs.showCompletedTasks,
-                                        onOpenDetails = { t -> detailsTaskId = t.id },
-                                        tagName = { tagId -> prefs.tags.firstOrNull { it.id == tagId }?.name },
-                                        noteCount = { t -> notesForTask(t).size },
-                                        onOpenNotes = { t ->
-                                        val linked = notesForTask(t)
-                                        if (linked.isNotEmpty()) {
-                                            taskNotesSheet = t to linked
-                                        }
-                                    },
-                                    dimScroll = prefs.dimScroll,
-                                    backdrop = listBackdrop,
-                                    onOpenFavorite = { note -> previewNote = note }
-                                )
+                                timelineTasks.any { !it.done }
                             }
+                            TimelineList(
+                                tasks = timelineTasks,
+                                favoriteNotes = favoriteNotes,
+                                emptyStateTitle = if (!timelineHasVisible) "No timeline tasks." else null,
+                                emptyStateBody = if (!timelineHasVisible) {
+                                    "Add a task with a deadline to see it on the timeline."
+                                } else null,
+                                showEmptyMascot = !timelineHasVisible,
+                                onToggleDone = { id ->
+                                    val t = tasks.firstOrNull { it.id == id }
+                                    if (t != null && !t.done) {
+                                        celebrationTrigger.intValue += 1
+                                    }
+                                    scope.launch { repo.toggleDone(id) }
+                                },
+                                onToggleSub = { taskId, subId ->
+                                    scope.launch {
+                                        repo.toggleSubtask(
+                                            taskId,
+                                            subId
+                                        )
+                                    }
+                                },
+                                onEdit = { t -> editTask = t; showEditor = true },
+                                onDelete = { id -> scope.launch { repo.deleteTask(id) } },
+                                onClearCompleted = { scope.launch { repo.clearCompletedTasks() } },
+                                showCompleted = prefs.showCompletedTasks,
+                                onOpenDetails = { t -> detailsTaskId = t.id },
+                                tagName = { tagId -> prefs.tags.firstOrNull { it.id == tagId }?.name },
+                                noteCount = { t -> notesForTask(t).size },
+                                onOpenNotes = { t ->
+                                    val linked = notesForTask(t)
+                                    if (linked.isNotEmpty()) {
+                                        taskNotesSheet = t to linked
+                                    }
+                                },
+                                dimScroll = prefs.dimScroll,
+                                onOpenFavorite = { note -> previewNote = note }
+                            )
                         }
 
                         HomeTab.INBOX -> {
-                            if (inboxTasks.isEmpty() && favoriteNotes.isEmpty()) {
-                                EmptyState(
-                                    "Inbox is empty.",
-                                    "Tasks without deadlines appear here.",
-                                    showMascot = true
-                                )
+                            val inboxHasVisible = if (prefs.showCompletedTasks) {
+                                inboxTasks.isNotEmpty()
                             } else {
-                                    FlatList(
-                                        tasks = inboxTasks,
-                                        favoriteNotes = favoriteNotes,
-                                        onToggleDone = { id ->
-                                            val t = tasks.firstOrNull { it.id == id }
-                                            if (t != null && !t.done) {
-                                                celebrationTrigger.intValue += 1
-                                            }
-                                            scope.launch { repo.toggleDone(id) }
-                                        },
-                                        onToggleSub = { taskId, subId ->
-                                            scope.launch {
-                                                repo.toggleSubtask(
-                                                    taskId,
-                                                    subId
-                                                )
-                                            }
-                                        },
-                                        onEdit = { t -> editTask = t; showEditor = true },
-                                        onDelete = { id -> scope.launch { repo.deleteTask(id) } },
-                                        onClearCompleted = { scope.launch { repo.clearCompletedTasks() } },
-                                        showCompleted = prefs.showCompletedTasks,
-                                        onOpenDetails = { t -> detailsTaskId = t.id },
-                                        tagName = { tagId -> prefs.tags.firstOrNull { it.id == tagId }?.name },
-                                        noteCount = { t -> notesForTask(t).size },
-                                        onOpenNotes = { t ->
-                                        val linked = notesForTask(t)
-                                        if (linked.isNotEmpty()) {
-                                            taskNotesSheet = t to linked
-                                        }
-                                    },
-                                    dimScroll = prefs.dimScroll,
-                                    backdrop = listBackdrop,
-                                    onOpenFavorite = { note -> previewNote = note }
-                                )
+                                inboxTasks.any { !it.done }
                             }
+                            FlatList(
+                                tasks = inboxTasks,
+                                favoriteNotes = favoriteNotes,
+                                emptyStateTitle = if (!inboxHasVisible) stringResource(Res.string.home_empty_inbox_title) else null,
+                                emptyStateBody = if (!inboxHasVisible) {
+                                    stringResource(Res.string.home_empty_inbox_body)
+                                } else null,
+                                showEmptyMascot = !inboxHasVisible,
+                                onToggleDone = { id ->
+                                    val t = tasks.firstOrNull { it.id == id }
+                                    if (t != null && !t.done) {
+                                        celebrationTrigger.intValue += 1
+                                    }
+                                    scope.launch { repo.toggleDone(id) }
+                                },
+                                onToggleSub = { taskId, subId ->
+                                    scope.launch {
+                                        repo.toggleSubtask(
+                                            taskId,
+                                            subId
+                                        )
+                                    }
+                                },
+                                onEdit = { t -> editTask = t; showEditor = true },
+                                onDelete = { id -> scope.launch { repo.deleteTask(id) } },
+                                onClearCompleted = { scope.launch { repo.clearCompletedTasks() } },
+                                showCompleted = prefs.showCompletedTasks,
+                                onOpenDetails = { t -> detailsTaskId = t.id },
+                                tagName = { tagId -> prefs.tags.firstOrNull { it.id == tagId }?.name },
+                                noteCount = { t -> notesForTask(t).size },
+                                onOpenNotes = { t ->
+                                    val linked = notesForTask(t)
+                                    if (linked.isNotEmpty()) {
+                                        taskNotesSheet = t to linked
+                                    }
+                                },
+                                dimScroll = prefs.dimScroll,
+                                onOpenFavorite = { note -> previewNote = note }
+                            )
+                        }
+
+                        HomeTab.CALENDAR -> {
+                            CalendarTab(
+                                tasks = filtered,
+                                onToggleDone = { id ->
+                                    val t = tasks.firstOrNull { it.id == id }
+                                    if (t != null && !t.done) {
+                                        celebrationTrigger.intValue += 1
+                                    }
+                                    scope.launch { repo.toggleDone(id) }
+                                },
+                                onToggleSub = { taskId, subId ->
+                                    scope.launch {
+                                        repo.toggleSubtask(
+                                            taskId,
+                                            subId
+                                        )
+                                    }
+                                },
+                                onEdit = { t -> editTask = t; showEditor = true },
+                                onDelete = { id -> scope.launch { repo.deleteTask(id) } },
+                                onClearCompleted = { scope.launch { repo.clearCompletedTasks() } },
+                                showCompleted = prefs.showCompletedTasks,
+                                onOpenDetails = { t -> detailsTaskId = t.id },
+                                tagName = { tagId -> prefs.tags.firstOrNull { it.id == tagId }?.name },
+                                noteCount = { t -> notesForTask(t).size },
+                                onOpenNotes = { t ->
+                                    val linked = notesForTask(t)
+                                    if (linked.isNotEmpty()) {
+                                        taskNotesSheet = t to linked
+                                    }
+                                },
+                                dimScroll = prefs.dimScroll,
+                                backdrop = listBackdrop
+                            )
                         }
                     }
                 }
 
                 SegmentedTabs(
-                    leftSelected = tab == HomeTab.TIMELINE,
-                    onLeft = { tab = HomeTab.TIMELINE },
-                    onRight = { tab = HomeTab.INBOX },
+                    items = listOf(
+                        stringResource(Res.string.tab_timeline),
+                        stringResource(Res.string.tab_calendar),
+                        stringResource(Res.string.tab_inbox)
+                    ),
+                    selectedIndex = when (tab) {
+                        HomeTab.TIMELINE -> 0
+                        HomeTab.CALENDAR -> 1
+                        HomeTab.INBOX -> 2
+                    },
+                    onSelect = { index ->
+                        tab = when (index) {
+                            0 -> HomeTab.TIMELINE
+                            1 -> HomeTab.CALENDAR
+                            else -> HomeTab.INBOX
+                        }
+                    },
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .padding(bottom = 96.dp)
@@ -379,10 +486,10 @@ fun HomeScreen(
 }
 
 
-
 @Composable
 private fun TopBar(
     tagsShown: Boolean,
+    motivation: String,
     onSort: () -> Unit,
     onToggleTags: () -> Unit
 ) {
@@ -396,19 +503,20 @@ private fun TopBar(
         Row(
             verticalAlignment = Alignment.CenterVertically
         ) {
-            AtomSimpleIcon(
-                size = 36.dp,
+            AtomSpinnerIcon(
+                size = 30.dp,
                 modifier = Modifier
                     .align(Alignment.CenterVertically)
             )
 
-            Spacer(Modifier.width(24.dp))
+            Spacer(Modifier.width(12.dp))
 
             Column(
                 modifier = Modifier
                     .align(Alignment.CenterVertically)
                     .padding(top = 2.dp)
                     .fillMaxHeight()
+                    .widthIn(max = 220.dp)
             ) {
                 Text(
                     "Atomic ToDo",
@@ -417,10 +525,18 @@ private fun TopBar(
                 )
 
                 Text(
-                    "beta 0.7.1",
+                    motivation,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontStyle = if (isIos) FontStyle.Normal else FontStyle.Italic,
+                    maxLines = 1,
+                    softWrap = false,
+                    overflow = TextOverflow.Clip,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .basicMarquee(
+                            iterations = Int.MAX_VALUE
+                        )
                 )
             }
         }
@@ -429,7 +545,7 @@ private fun TopBar(
             IconButton(onClick = onToggleTags) {
                 PlatformIcon(
                     id = AppIconId.Tag,
-                    contentDescription = "Tags",
+                    contentDescription = stringResource(Res.string.home_tags_cd),
                     tint = if (tagsShown) MaterialTheme.colorScheme.primary else LocalContentColor.current,
                     modifier = Modifier.size(22.dp)
                 )
@@ -437,7 +553,7 @@ private fun TopBar(
             IconButton(onClick = onSort) {
                 PlatformIcon(
                     id = AppIconId.Filter,
-                    contentDescription = "Filter",
+                    contentDescription = stringResource(Res.string.home_filter_cd),
                     tint = LocalContentColor.current,
                     modifier = Modifier.size(22.dp)
                 )
@@ -462,12 +578,12 @@ private fun TagFilters(
         FilterChip(
             selected = selectedTagId == null,
             onClick = { onPick(null) },
-            label = { Text("All") }
+            label = { Text(stringResource(Res.string.home_tag_all)) }
         )
         FilterChip(
             selected = selectedTagId == "__no_tag__",
             onClick = { onPick("__no_tag__") },
-            label = { Text("No tag") }
+            label = { Text(stringResource(Res.string.home_tag_none)) }
         )
         tags.forEach { tag ->
             FilterChip(
@@ -557,7 +673,10 @@ private fun TaskDetailsSheet(
                                 Modifier.fillMaxWidth().padding(14.dp),
                                 verticalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
-                                Text("Estimate", style = MaterialTheme.typography.titleMedium)
+                                Text(
+                                    stringResource(Res.string.home_estimate),
+                                    style = MaterialTheme.typography.titleMedium
+                                )
                                 Text(
                                     formatHours(it),
                                     style = MaterialTheme.typography.bodyMedium,
@@ -578,7 +697,10 @@ private fun TaskDetailsSheet(
                                 Modifier.fillMaxWidth().padding(14.dp),
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                Text("Details", style = MaterialTheme.typography.titleMedium)
+                                Text(
+                                    stringResource(Res.string.home_details),
+                                    style = MaterialTheme.typography.titleMedium
+                                )
                                 Text(task.plan, style = MaterialTheme.typography.bodyMedium)
                             }
                         }
@@ -595,7 +717,10 @@ private fun TaskDetailsSheet(
                                 Modifier.fillMaxWidth().padding(14.dp),
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                Text("Subtasks", style = MaterialTheme.typography.titleMedium)
+                                Text(
+                                    stringResource(Res.string.home_subtasks),
+                                    style = MaterialTheme.typography.titleMedium
+                                )
                                 SubtasksInteractive(task, onToggleSub)
                             }
                         }
@@ -671,9 +796,16 @@ private fun TaskNotesSheet(
         ) {
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("Notes", style = MaterialTheme.typography.titleLarge)
                     Text(
-                        "${notes.size} linked to \"$taskTitle\"",
+                        stringResource(Res.string.home_notes_title),
+                        style = MaterialTheme.typography.titleLarge
+                    )
+                    Text(
+                        stringResource(
+                            Res.string.home_notes_linked_to,
+                            notes.size.toString(),
+                            taskTitle
+                        ),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -694,7 +826,7 @@ private fun TaskNotesSheet(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Text(
-                            note.title.ifBlank { "Untitled" },
+                            note.title.ifBlank { stringResource(Res.string.home_untitled) },
                             style = MaterialTheme.typography.titleMedium
                         )
                         Text(
@@ -717,38 +849,22 @@ private fun TaskNotesSheet(
 }
 
 @Composable
-private fun InfoRow(label: String, value: String) {
-    Row(
-        Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(value, style = MaterialTheme.typography.bodyMedium)
-    }
-}
-
-private fun importanceLabel(i: Importance): String = when (i) {
-    Importance.LOW -> "Low"
-    Importance.NORMAL -> "Normal"
-    Importance.HIGH -> "High"
-    Importance.CRITICAL -> "Critical"
-}
-
 private fun formatHours(v: Double): String {
     val scaled = (v * 10).roundToInt()
     val intPart = scaled / 10
-    val frac = kotlin.math.abs(scaled % 10)
+    val frac = abs(scaled % 10)
     val text = if (frac == 0) {
         intPart.toString()
     } else {
         "$intPart.$frac"
     }
-    return "$text h"
+    return "$text ${stringResource(Res.string.hours_short)}"
 }
 
+@Composable
 private fun notePreview(note: Note): String {
     val text = note.content.trim()
-    if (text.isBlank()) return "No content"
+    if (text.isBlank()) return stringResource(Res.string.home_no_content)
     return text.replace("\n", " ").take(140)
 }
 
@@ -769,7 +885,11 @@ private fun TagChipLabel(name: String) {
                 modifier = Modifier.size(20.dp)
             )
             Spacer(Modifier.width(6.dp))
-            Text(name, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+            Text(
+                name,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary
+            )
         }
     }
 }
@@ -779,7 +899,8 @@ private fun NoteChipLabel(
     count: Int,
     onOpen: () -> Unit
 ) {
-    val label = if (count == 1) "Note" else "Notes"
+    val label =
+        if (count == 1) stringResource(Res.string.home_note_singular) else stringResource(Res.string.home_note_plural)
     Surface(
         shape = MaterialTheme.shapes.small,
         color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
@@ -814,17 +935,20 @@ private fun DateInfoSection(task: TodoTask) {
             Modifier.fillMaxWidth().padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Text("Dates", style = MaterialTheme.typography.titleMedium)
+            Text(
+                stringResource(Res.string.home_dates_title),
+                style = MaterialTheme.typography.titleMedium
+            )
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 planned?.let {
                     DateInfoCard(
-                        title = "Planned",
+                        title = stringResource(Res.string.home_date_planned),
                         instant = it
                     )
                 }
                 deadline?.let {
                     DateInfoCard(
-                        title = "Due",
+                        title = stringResource(Res.string.home_date_due),
                         instant = it
                     )
                 }
@@ -841,12 +965,14 @@ private fun DateInfoCard(
     val days = daysUntil(instant)
     val isOverdue = instant.toEpochMilliseconds() < nowInstant().toEpochMilliseconds()
     val badge = if (isOverdue) {
-        "Overdue"
+        stringResource(Res.string.home_overdue)
     } else {
-        "In $days days"
+        stringResource(Res.string.home_in_days, days.toString())
     }
-    val badgeColor = if (isOverdue) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
-    val badgeOn = if (isOverdue) MaterialTheme.colorScheme.onError else MaterialTheme.colorScheme.onPrimary
+    val badgeColor =
+        if (isOverdue) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+    val badgeOn =
+        if (isOverdue) MaterialTheme.colorScheme.onError else MaterialTheme.colorScheme.onPrimary
 
     Surface(
         shape = MaterialTheme.shapes.medium,
@@ -955,7 +1081,7 @@ private fun daysUntil(deadline: Instant): Int {
 }
 
 @Composable
-private fun EmptyState(title: String, body: String, showMascot: Boolean) {
+fun EmptyState(title: String, body: String, showMascot: Boolean) {
     Column(
         Modifier
             .fillMaxWidth()
@@ -980,7 +1106,7 @@ private fun MeteorHeader() {
     Box(
         Modifier
             .fillMaxWidth()
-            .height(120.dp)
+            .height(140.dp)
     ) {
         MeteorField(modifier = Modifier.matchParentSize())
         ChromeDinoMascot(
@@ -1006,7 +1132,7 @@ private fun MeteorField(modifier: Modifier = Modifier) {
             val now = withFrameNanos { it }
             nowNanos = now
             val elapsed = now - lastSpawn
-            val spawnDelay = (200L + rng.nextInt(400)).toLong() * 1_000_000L
+            val spawnDelay = (200L + rng.nextInt(400)) * 1_000_000L
             if (elapsed >= spawnDelay && particles.size < 18) {
                 particles.add(
                     createParticle(
@@ -1206,9 +1332,9 @@ private fun createVolleyParticle(
     )
     val speed = 780f + rng.nextFloat() * 520f
     val angle = (-105f + rng.nextFloat() * 50f)
-    val rad = angle * (kotlin.math.PI / 180.0)
-    val vx = kotlin.math.cos(rad).toFloat() * speed
-    val vy = kotlin.math.sin(rad).toFloat() * speed
+    val rad = angle * (PI / 180.0)
+    val vx = cos(rad).toFloat() * speed
+    val vy = sin(rad).toFloat() * speed
     val streak = rng.nextFloat() > 0.35f
     val kind = if (streak) VolleyKind.STREAK else VolleyKind.DOT
     val length = if (streak) 18f + rng.nextFloat() * 12f else 8f + rng.nextFloat() * 6f
@@ -1235,7 +1361,7 @@ private fun DrawScope.drawVolleyParticle(p: VolleyParticle, t: Float) {
     val gravity = Offset(0f, 900f)
     val drift = p.velocity * elapsedSec
     val fall = gravity * (0.5f * elapsedSec * elapsedSec)
-    val sway = kotlin.math.sin(t * p.swayFreq + p.swayPhase) * p.swayAmp
+    val sway = sin(t * p.swayFreq + p.swayPhase) * p.swayAmp
     val pos = p.start + drift + fall + Offset(sway, 0f)
     val alpha = (1f - t).coerceIn(0f, 1f)
     val color = p.color.copy(alpha = alpha)
@@ -1243,7 +1369,7 @@ private fun DrawScope.drawVolleyParticle(p: VolleyParticle, t: Float) {
     when (p.kind) {
         VolleyKind.STREAK -> {
             val dir = p.velocity
-            val len = kotlin.math.sqrt(dir.x * dir.x + dir.y * dir.y).coerceAtLeast(0.001f)
+            val len = sqrt(dir.x * dir.x + dir.y * dir.y).coerceAtLeast(0.001f)
             val nx = dir.x / len
             val ny = dir.y / len
             val tail = Offset(pos.x - nx * p.length, pos.y - ny * p.length)
@@ -1255,6 +1381,7 @@ private fun DrawScope.drawVolleyParticle(p: VolleyParticle, t: Float) {
                 cap = StrokeCap.Round
             )
         }
+
         VolleyKind.DOT -> {
             drawCircle(
                 color = color,
@@ -1333,57 +1460,65 @@ private fun cubicBezierTangent(p0: Offset, p1: Offset, p2: Offset, p3: Offset, t
     val u = 1f - t
     val x = 3f * u * u * (p1.x - p0.x) + 6f * u * t * (p2.x - p1.x) + 3f * t * t * (p3.x - p2.x)
     val y = 3f * u * u * (p1.y - p0.y) + 6f * u * t * (p2.y - p1.y) + 3f * t * t * (p3.y - p2.y)
-    val len = kotlin.math.sqrt(x * x + y * y).coerceAtLeast(0.001f)
+    val len = sqrt(x * x + y * y).coerceAtLeast(0.001f)
     return Offset(x / len, y / len)
 }
 
 @Composable
 private fun FavoriteNotesSection(
     notes: List<Note>,
+    dimScroll: Boolean,
     onOpen: (Note) -> Unit
 ) {
     Column(Modifier.fillMaxWidth()) {
         Text(
-            "Favorite notes",
+            stringResource(Res.string.home_favorite_notes),
             style = MaterialTheme.typography.titleSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(start = 4.dp, bottom = 6.dp)
         )
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            notes.forEach { note ->
-                Surface(
-                    shape = MaterialTheme.shapes.large,
-                    color = MaterialTheme.colorScheme.surface,
-                    tonalElevation = 2.dp,
-                    modifier = Modifier
-                        .width(220.dp)
-                        .clickable { onOpen(note) }
-                ) {
-                    Column(
-                        Modifier.padding(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
+        val scrollState = rememberScrollState()
+        Box(Modifier.fillMaxWidth()) {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(scrollState),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                notes.forEach { note ->
+                    Surface(
+                        onClick = { onOpen(note) },
+                        shape = MaterialTheme.shapes.large,
+                        color = MaterialTheme.colorScheme.surface,
+                        tonalElevation = 2.dp,
+                        modifier = Modifier.width(220.dp)
                     ) {
-                        Text(
-                            note.title.ifBlank { "Untitled" },
-                            style = MaterialTheme.typography.titleMedium,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Text(
-                            notePreview(note),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 3,
-                            overflow = TextOverflow.Ellipsis
-                        )
+                        Column(
+                            Modifier.padding(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Text(
+                                note.title.ifBlank { stringResource(Res.string.home_untitled) },
+                                style = MaterialTheme.typography.titleMedium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                notePreview(note),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 3,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
                     }
                 }
             }
+            FadingScrollEdgesHorizontal(
+                scrollState = scrollState,
+                modifier = Modifier.matchParentSize(),
+                enabled = dimScroll
+            )
         }
     }
 }
@@ -1392,6 +1527,9 @@ private fun FavoriteNotesSection(
 private fun TimelineList(
     tasks: List<TodoTask>,
     favoriteNotes: List<Note>,
+    emptyStateTitle: String?,
+    emptyStateBody: String?,
+    showEmptyMascot: Boolean,
     onToggleDone: (String) -> Unit,
     onToggleSub: (String, String) -> Unit,
     onOpenDetails: (TodoTask) -> Unit,
@@ -1403,54 +1541,72 @@ private fun TimelineList(
     noteCount: (TodoTask) -> Int,
     onOpenNotes: (TodoTask) -> Unit,
     dimScroll: Boolean,
-    backdrop: com.kyant.backdrop.backdrops.LayerBackdrop,
     onOpenFavorite: (Note) -> Unit
 ) {
-    val grouped = remember(tasks) {
+    val plannedEarlierLabel = stringResource(Res.string.home_planned_earlier)
+    val noDeadlineLabel = stringResource(Res.string.home_no_deadline)
+    val grouped = remember(tasks, plannedEarlierLabel, noDeadlineLabel) {
         tasks.groupBy { t ->
             val now = nowInstant()
             val planned = t.plannedAt
             val deadline = t.deadline
             if (deadline != null && deadline < now) {
-                "Запланированы ранее"
+                plannedEarlierLabel
             } else if (planned != null && planned < now && deadline == null) {
-                "Запланированы ранее"
+                plannedEarlierLabel
             } else if (deadline != null) {
                 dateKey(deadline)
             } else if (planned != null) {
                 dateKey(planned)
             } else {
-                "No deadline"
+                noDeadlineLabel
             }
         }
     }
+    val groupEntries = grouped.entries.toList()
     val listState = rememberLazyListState()
 
     Box(Modifier.fillMaxWidth()) {
         LazyColumn(
             state = listState,
-            contentPadding = PaddingValues(horizontal = 18.dp, vertical = 6.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+            contentPadding = PaddingValues(horizontal = 18.dp, vertical = 6.dp)
         ) {
+            if (emptyStateTitle != null && emptyStateBody != null) {
+                item {
+                    EmptyState(
+                        title = emptyStateTitle,
+                        body = emptyStateBody,
+                        showMascot = showEmptyMascot
+                    )
+                }
+            }
+
             if (favoriteNotes.isNotEmpty()) {
                 item {
                     FavoriteNotesSection(
                         notes = favoriteNotes,
+                        dimScroll = dimScroll,
                         onOpen = onOpenFavorite
                     )
                 }
             }
-            grouped.forEach { (k, v) ->
+
+            groupEntries.forEachIndexed { index, (title, v) ->
                 item {
-                    Text(
-                        k,
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 10.dp, bottom = 2.dp)
-                    )
+                    Column {
+                        Text(
+                            text = title,
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(bottom = 8.dp, top = 12.dp)
+                        )
+                    }
                 }
+
                 items(v, key = { it.id }) { t ->
-                    Box(Modifier.itemPlacement()) {
+                    Box(
+                        Modifier.itemPlacement()
+                    ) {
                         AnimatedVisibility(
                             visible = showCompleted || !t.done,
                             enter = fadeIn(tween(160)),
@@ -1460,20 +1616,21 @@ private fun TimelineList(
                                 task = t,
                                 tagLabel = tagName(t.tagId),
                                 noteCount = noteCount(t),
-                                backdrop = backdrop,
                                 onOpenNotes = { onOpenNotes(t) },
                                 onToggleDone = { onToggleDone(t.id) },
                                 onToggleSub = { subId -> onToggleSub(t.id, subId) },
                                 onOpenDetails = { onOpenDetails(t) },
                                 onEdit = { onEdit(t) },
                                 onDelete = { onDelete(t.id) },
-                                onClearCompleted = onClearCompleted
+                                onClearCompleted = onClearCompleted,
+                                modifier = Modifier.padding(bottom = 12.dp)
                             )
                         }
                     }
                 }
             }
-            item { Spacer(Modifier.height(120.dp)) }
+
+            item { Spacer(Modifier.height(140.dp)) }
         }
         FadingScrollEdges(
             listState = listState,
@@ -1487,6 +1644,9 @@ private fun TimelineList(
 private fun FlatList(
     tasks: List<TodoTask>,
     favoriteNotes: List<Note>,
+    emptyStateTitle: String?,
+    emptyStateBody: String?,
+    showEmptyMascot: Boolean,
     onToggleDone: (String) -> Unit,
     onToggleSub: (String, String) -> Unit,
     onOpenDetails: (TodoTask) -> Unit,
@@ -1498,7 +1658,6 @@ private fun FlatList(
     noteCount: (TodoTask) -> Int,
     onOpenNotes: (TodoTask) -> Unit,
     dimScroll: Boolean,
-    backdrop: com.kyant.backdrop.backdrops.LayerBackdrop,
     onOpenFavorite: (Note) -> Unit
 ) {
     val listState = rememberLazyListState()
@@ -1508,10 +1667,20 @@ private fun FlatList(
             contentPadding = PaddingValues(horizontal = 18.dp, vertical = 6.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
+            if (emptyStateTitle != null && emptyStateBody != null) {
+                item {
+                    EmptyState(
+                        title = emptyStateTitle,
+                        body = emptyStateBody,
+                        showMascot = showEmptyMascot
+                    )
+                }
+            }
             if (favoriteNotes.isNotEmpty()) {
                 item {
                     FavoriteNotesSection(
                         notes = favoriteNotes,
+                        dimScroll = dimScroll,
                         onOpen = onOpenFavorite
                     )
                 }
@@ -1527,7 +1696,6 @@ private fun FlatList(
                             task = t,
                             tagLabel = tagName(t.tagId),
                             noteCount = noteCount(t),
-                            backdrop = backdrop,
                             onOpenNotes = { onOpenNotes(t) },
                             onToggleDone = { onToggleDone(t.id) },
                             onToggleSub = { subId -> onToggleSub(t.id, subId) },
@@ -1539,7 +1707,7 @@ private fun FlatList(
                     }
                 }
             }
-            item { Spacer(Modifier.height(120.dp)) }
+            item { Spacer(Modifier.height(140.dp)) }
         }
         FadingScrollEdges(
             listState = listState,

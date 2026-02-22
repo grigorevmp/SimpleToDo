@@ -13,9 +13,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import kotlin.math.min
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
@@ -58,5 +60,57 @@ fun AtomSimpleIcon(
         }
 
         drawCircle(color = color, radius = stroke * 1.1f, center = center)
+    }
+}
+
+@Composable
+fun AtomSpinnerIcon(
+    size: Dp = 28.dp,
+    modifier: Modifier = Modifier
+) {
+    val color = MaterialTheme.colorScheme.onSurface
+    val transition = rememberInfiniteTransition(label = "atom-spinner")
+    val angle by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1800),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "atom-spinner-angle"
+    )
+    Canvas(modifier = modifier.size(size)) {
+        val minDim = min(this.size.width, this.size.height)
+        val stroke = Stroke(width = minDim * 0.08f)
+        val rx = minDim * 0.42f
+        val ry = minDim * 0.18f
+        rotate(angle) {
+            drawOval(
+                color = color.copy(alpha = 0.7f),
+                topLeft = Offset(center.x - rx, center.y - ry),
+                size = androidx.compose.ui.geometry.Size(rx * 2, ry * 2),
+                style = stroke
+            )
+        }
+        rotate(angle + 60f) {
+            drawOval(
+                color = color.copy(alpha = 0.6f),
+                topLeft = Offset(center.x - rx, center.y - ry),
+                size = androidx.compose.ui.geometry.Size(rx * 2, ry * 2),
+                style = stroke
+            )
+        }
+        rotate(angle + 120f) {
+            drawOval(
+                color = color.copy(alpha = 0.5f),
+                topLeft = Offset(center.x - rx, center.y - ry),
+                size = androidx.compose.ui.geometry.Size(rx * 2, ry * 2),
+                style = stroke
+            )
+        }
+        drawCircle(
+            color = color,
+            radius = minDim * 0.10f
+        )
     }
 }

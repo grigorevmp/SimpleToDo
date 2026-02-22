@@ -31,8 +31,11 @@ kotlin {
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.androidx.activity.compose)
             implementation(libs.androidx.core.ktx)
+            implementation(libs.androidx.appcompat)
             implementation(libs.androidx.work.runtime.ktx)
             implementation(libs.androidx.compose.material.icons.extended)
+            implementation(libs.androidx.glance)
+            implementation(libs.androidx.glance.appwidget)
         }
         commonMain.dependencies {
             implementation(libs.compose.runtime)
@@ -67,8 +70,8 @@ android {
         applicationId = "com.grigorevmp.simpletodo"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 4
+        versionName = "1.0.3-beta"
     }
     packaging {
         resources {
@@ -79,6 +82,9 @@ android {
         getByName("release") {
             isMinifyEnabled = false
         }
+    }
+    buildFeatures {
+        buildConfig = true
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11

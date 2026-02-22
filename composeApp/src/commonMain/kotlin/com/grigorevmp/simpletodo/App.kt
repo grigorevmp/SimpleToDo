@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -18,6 +19,9 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.compose.animation.Crossfade
+import org.jetbrains.compose.resources.stringResource
+import simpletodo.composeapp.generated.resources.Res
+import simpletodo.composeapp.generated.resources.action_new
 import com.grigorevmp.simpletodo.di.AppComponent
 import com.grigorevmp.simpletodo.model.ThemeMode
 import com.grigorevmp.simpletodo.ui.components.AppTab
@@ -30,6 +34,7 @@ import com.grigorevmp.simpletodo.ui.settings.SettingsScreen
 import com.grigorevmp.simpletodo.ui.theme.DinoTheme
 import com.grigorevmp.simpletodo.platform.PlatformSystemBars
 import com.grigorevmp.simpletodo.platform.isIos
+import com.grigorevmp.simpletodo.platform.applyAppLanguage
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 
@@ -39,6 +44,9 @@ fun App() {
 
     val dark = isSystemInDarkTheme()
     val prefs by component.repo.prefs.collectAsState()
+    LaunchedEffect(prefs.language) {
+        applyAppLanguage(prefs.language)
+    }
     val mode = prefs.themeMode
     val forceLight = prefs.disableDarkTheme
     val isDark = if (forceLight) {
@@ -161,7 +169,7 @@ fun App() {
                         AppTab.HOME -> listOf(
                             CreateAction(
                                 id = "new_task",
-                                label = "New",
+                                label = stringResource(Res.string.action_new),
                                 contentDescription = "Create task",
                                 icon = AddIcon,
                                 onClick = {
@@ -177,7 +185,7 @@ fun App() {
                         AppTab.NOTES -> listOf(
                             CreateAction(
                                 id = "new_note",
-                                label = "New",
+                                label = stringResource(Res.string.action_new),
                                 contentDescription = "Create note",
                                 icon = AddIcon,
                                 onClick = {
@@ -197,7 +205,6 @@ fun App() {
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .padding(horizontal = 22.dp, vertical = if (isIos) 8.dp else 12.dp)
-                        .padding(bottom = if (isIos) 2.dp else 8.dp)
                 )
             }
         }

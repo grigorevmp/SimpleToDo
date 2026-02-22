@@ -1,7 +1,7 @@
 package com.grigorevmp.simpletodo
 
 import android.os.Bundle
-import androidx.activity.ComponentActivity
+import androidx.appcompat.app.AppCompatActivity
 import androidx.activity.compose.setContent
 import com.grigorevmp.simpletodo.platform.AndroidContextHolder
 import androidx.compose.runtime.LaunchedEffect
@@ -39,11 +39,12 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 
-class MainActivity : ComponentActivity() {
+class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         AndroidContextHolder.appContext = applicationContext
+        AndroidContextHolder.currentActivity = this
 
         setContent {
             var showSplash by remember { mutableStateOf(true) }
@@ -56,6 +57,18 @@ class MainActivity : ComponentActivity() {
             } else {
                 App()
             }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        AndroidContextHolder.currentActivity = this
+    }
+
+    override fun onPause() {
+        super.onPause()
+        if (AndroidContextHolder.currentActivity === this) {
+            AndroidContextHolder.currentActivity = null
         }
     }
 }

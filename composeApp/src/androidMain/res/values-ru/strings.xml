@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">Atomic ToDo</string>
+    <string name="widget_tasks_description">Актуальные задачи на сегодня и ближайшие дни.</string>
+    <string name="widget_tasks_placeholder">Загрузка задач...</string>
+    <string name="widget_tasks_empty">Нет ближайших задач</string>
+    <string name="widget_today">Сегодня</string>
+    <string name="widget_tomorrow">Завтра</string>
+    <string name="widget_overdue">Просрочено</string>
+    <string name="widget_untitled">(без названия)</string>
+</resources>

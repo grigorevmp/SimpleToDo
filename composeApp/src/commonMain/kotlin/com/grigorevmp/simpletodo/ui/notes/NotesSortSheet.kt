@@ -24,6 +24,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.grigorevmp.simpletodo.model.NoteSortConfig
 import com.grigorevmp.simpletodo.model.NoteSortField
+import org.jetbrains.compose.resources.stringResource
+import simpletodo.composeapp.generated.resources.Res
+import simpletodo.composeapp.generated.resources.notes_sort_title
+import simpletodo.composeapp.generated.resources.notes_sort_subtitle
+import simpletodo.composeapp.generated.resources.notes_sort_sorting_title
+import simpletodo.composeapp.generated.resources.notes_sort_sorting_desc
+import simpletodo.composeapp.generated.resources.notes_sort_by_date
+import simpletodo.composeapp.generated.resources.notes_sort_by_name
+import simpletodo.composeapp.generated.resources.notes_sort_folders_title
+import simpletodo.composeapp.generated.resources.notes_sort_folders_desc
+import simpletodo.composeapp.generated.resources.notes_sort_folders_on_top
+import simpletodo.composeapp.generated.resources.notes_sort_apply
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -41,9 +53,9 @@ fun NotesSortSheet(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("Фильтры", style = MaterialTheme.typography.titleLarge)
+                Text(stringResource(Res.string.notes_sort_title), style = MaterialTheme.typography.titleLarge)
                 Text(
-                    "Выберите порядок и приоритет папок.",
+                    stringResource(Res.string.notes_sort_subtitle),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -58,9 +70,9 @@ fun NotesSortSheet(
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text("Сортировка", style = MaterialTheme.typography.titleMedium)
+                        Text(stringResource(Res.string.notes_sort_sorting_title), style = MaterialTheme.typography.titleMedium)
                         Text(
-                            "Основное поле сортировки",
+                            stringResource(Res.string.notes_sort_sorting_desc),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -69,12 +81,12 @@ fun NotesSortSheet(
                         FilterChip(
                             selected = field == NoteSortField.DATE,
                             onClick = { field = NoteSortField.DATE },
-                            label = { Text("По дате") }
+                            label = { Text(stringResource(Res.string.notes_sort_by_date)) }
                         )
                         FilterChip(
                             selected = field == NoteSortField.NAME,
                             onClick = { field = NoteSortField.NAME },
-                            label = { Text("По имени") }
+                            label = { Text(stringResource(Res.string.notes_sort_by_name)) }
                         )
                     }
                 }
@@ -89,9 +101,9 @@ fun NotesSortSheet(
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text("Папки", style = MaterialTheme.typography.titleMedium)
+                        Text(stringResource(Res.string.notes_sort_folders_title), style = MaterialTheme.typography.titleMedium)
                         Text(
-                            "Показывать папки выше заметок",
+                            stringResource(Res.string.notes_sort_folders_desc),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -99,7 +111,7 @@ fun NotesSortSheet(
                     FilterChip(
                         selected = foldersOnTop,
                         onClick = { foldersOnTop = !foldersOnTop },
-                        label = { Text("Папки сверху") }
+                        label = { Text(stringResource(Res.string.notes_sort_folders_on_top)) }
                     )
                 }
             }
@@ -110,7 +122,7 @@ fun NotesSortSheet(
                     onDismiss()
                 },
                 modifier = Modifier.fillMaxWidth()
-            ) { Text("Применить") }
+            ) { Text(stringResource(Res.string.notes_sort_apply)) }
 
             Spacer(Modifier.height(18.dp))
         }

@@ -13,7 +13,9 @@ import com.grigorevmp.simpletodo.model.Tag
 import com.grigorevmp.simpletodo.model.TaskNoteLink
 import com.grigorevmp.simpletodo.model.ThemeMode
 import com.grigorevmp.simpletodo.model.TodoTask
+import com.grigorevmp.simpletodo.model.AppLanguage
 import com.grigorevmp.simpletodo.platform.NotificationScheduler
+import com.grigorevmp.simpletodo.platform.requestTasksWidgetUpdate
 import com.grigorevmp.simpletodo.util.newId
 import com.grigorevmp.simpletodo.util.nowInstant
 import com.russhwolf.settings.Settings
@@ -31,6 +33,14 @@ class TodoRepository(
     private val settings: Settings,
     private val scheduler: NotificationScheduler
 ) {
+    @kotlinx.serialization.Serializable
+    private data class BackupPayload(
+        val tasks: List<TodoTask>,
+        val notes: List<Note>,
+        val folders: List<NoteFolder>,
+        val links: List<TaskNoteLink>,
+        val prefs: AppPrefs
+    )
     private val json = Json {
         ignoreUnknownKeys = true
         encodeDefaults = true
@@ -70,6 +80,7 @@ class TodoRepository(
 
     private fun saveTasks(list: List<TodoTask>) {
         settings.putString(tasksKey, json.encodeToString(ListSerializer(TodoTask.serializer()), list))
+        requestTasksWidgetUpdate()
     }
 
     private fun loadNotes(): List<Note> {
@@ -461,6 +472,59 @@ class TodoRepository(
             savePrefs(p)
         }
     }
+
+    suspend fun setLanguage(language: AppLanguage) {
+        mutex.withLock {
+            val p = _prefs.value.copy(language = language)
+            _prefs.value = p
+            savePrefs(p)
+        }
+    }
+
+    suspend fun exportData(): String = mutex.withLock {
+        val payload = BackupPayload(
+            tasks = _tasks.value,
+            notes = _notes.value,
+            folders = _noteFolders.value,
+            links = _taskNoteLinks.value,
+            prefs = _prefs.value
+        )
+        json.encodeToString(BackupPayload.serializer(), payload)
+    }
+
+    suspend fun importData(payload: String): Result<Unit> = runCatching {
+        val data = json.decodeFromString(BackupPayload.serializer(), payload)
+        mutex.withLock {
+            _tasks.value = data.tasks
+            _notes.value = data.notes
+            _noteFolders.value = data.folders
+            _taskNoteLinks.value = data.links
+            _prefs.value = data.prefs
+            saveTasks(data.tasks)
+            saveNotes(data.notes)
+            saveFolders(data.folders)
+            saveLinks(data.links)
+            savePrefs(data.prefs)
+            rescheduleAllLocked()
+        }
+    }
+
+    suspend fun clearAllData() {
+        mutex.withLock {
+            scheduler.cancelAll()
+            _tasks.value = emptyList()
+            _notes.value = emptyList()
+            _noteFolders.value = emptyList()
+            _taskNoteLinks.value = emptyList()
+            _prefs.value = AppPrefs()
+            saveTasks(_tasks.value)
+            saveNotes(_notes.value)
+            saveFolders(_noteFolders.value)
+            saveLinks(_taskNoteLinks.value)
+            savePrefs(_prefs.value)
+        }
+    }
+
 
     suspend fun clearCompletedTasks() {
         mutex.withLock {

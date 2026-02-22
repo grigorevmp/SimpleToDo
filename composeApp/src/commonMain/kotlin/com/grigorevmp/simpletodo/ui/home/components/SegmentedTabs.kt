@@ -23,13 +23,11 @@ import com.kyant.backdrop.drawBackdrop
 import com.kyant.backdrop.effects.blur
 import com.kyant.backdrop.effects.lens
 import com.kyant.backdrop.effects.vibrancy
-
-
 @Composable
 fun SegmentedTabs(
-    leftSelected: Boolean,
-    onLeft: () -> Unit,
-    onRight: () -> Unit,
+    items: List<String>,
+    selectedIndex: Int,
+    onSelect: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val fallbackColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)
@@ -55,23 +53,16 @@ fun SegmentedTabs(
             )
 
             Row {
-                SegmentedButton(
-                    text = "Timeline",
-                    selected = leftSelected,
-                    active = active,
-                    activeText = activeText,
-                    inactiveText = inactiveText,
-                    onClick = onLeft
-                )
-
-                SegmentedButton(
-                    text = "Inbox",
-                    selected = !leftSelected,
-                    active = active,
-                    activeText = activeText,
-                    inactiveText = inactiveText,
-                    onClick = onRight
-                )
+                items.forEachIndexed { index, label ->
+                    SegmentedButton(
+                        text = label,
+                        selected = index == selectedIndex,
+                        active = active,
+                        activeText = activeText,
+                        inactiveText = inactiveText,
+                        onClick = { onSelect(index) }
+                    )
+                }
             }
         }
     }

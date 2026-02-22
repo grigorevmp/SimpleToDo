@@ -29,6 +29,27 @@ import androidx.compose.ui.unit.dp
 import com.grigorevmp.simpletodo.model.SortConfig
 import com.grigorevmp.simpletodo.model.SortDir
 import com.grigorevmp.simpletodo.model.SortField
+import org.jetbrains.compose.resources.stringResource
+import simpletodo.composeapp.generated.resources.Res
+import simpletodo.composeapp.generated.resources.sort_title
+import simpletodo.composeapp.generated.resources.sort_subtitle
+import simpletodo.composeapp.generated.resources.sort_primary_title
+import simpletodo.composeapp.generated.resources.sort_primary_subtitle
+import simpletodo.composeapp.generated.resources.sort_secondary_title
+import simpletodo.composeapp.generated.resources.sort_secondary_subtitle
+import simpletodo.composeapp.generated.resources.sort_show_completed_title
+import simpletodo.composeapp.generated.resources.sort_show_completed_desc
+import simpletodo.composeapp.generated.resources.sort_reset_default
+import simpletodo.composeapp.generated.resources.sort_apply
+import simpletodo.composeapp.generated.resources.sort_field_label
+import simpletodo.composeapp.generated.resources.sort_direction_label
+import simpletodo.composeapp.generated.resources.sort_ascending
+import simpletodo.composeapp.generated.resources.sort_descending
+import simpletodo.composeapp.generated.resources.sort_field_planned
+import simpletodo.composeapp.generated.resources.sort_field_deadline
+import simpletodo.composeapp.generated.resources.sort_field_priority
+import simpletodo.composeapp.generated.resources.sort_field_created
+import simpletodo.composeapp.generated.resources.sort_field_title
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -50,17 +71,17 @@ fun SortSheet(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("Sorting", style = MaterialTheme.typography.titleLarge)
+                Text(stringResource(Res.string.sort_title), style = MaterialTheme.typography.titleLarge)
                 Text(
-                    "Pick primary and secondary ordering.",
+                    stringResource(Res.string.sort_subtitle),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
             SortRow(
-                title = "Primary",
-                subtitle = "Used first to order tasks",
+                title = stringResource(Res.string.sort_primary_title),
+                subtitle = stringResource(Res.string.sort_primary_subtitle),
                 field = primary,
                 dir = primaryDir,
                 onField = { primary = it },
@@ -68,8 +89,8 @@ fun SortSheet(
             )
 
             SortRow(
-                title = "Secondary",
-                subtitle = "Used to break ties",
+                title = stringResource(Res.string.sort_secondary_title),
+                subtitle = stringResource(Res.string.sort_secondary_subtitle),
                 field = secondary,
                 dir = secondaryDir,
                 onField = { secondary = it },
@@ -85,9 +106,9 @@ fun SortSheet(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text("Show completed", style = MaterialTheme.typography.titleMedium)
+                        Text(stringResource(Res.string.sort_show_completed_title), style = MaterialTheme.typography.titleMedium)
                         Text(
-                            "Toggle visibility of done tasks",
+                            stringResource(Res.string.sort_show_completed_desc),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -111,14 +132,14 @@ fun SortSheet(
                         onDismiss()
                     },
                     modifier = Modifier.weight(1f)
-                ) { Text("Reset to default") }
+                ) { Text(stringResource(Res.string.sort_reset_default)) }
                 Button(
                     onClick = {
                         onApply(SortConfig(primary, primaryDir, secondary, secondaryDir))
                         onDismiss()
                     },
                     modifier = Modifier.weight(1f)
-                ) { Text("Apply") }
+                ) { Text(stringResource(Res.string.sort_apply)) }
             }
 
             Spacer(Modifier.height(18.dp))
@@ -172,7 +193,7 @@ private fun FieldMenu(
 ) {
     var expanded by remember { mutableStateOf(false) }
     Column(modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text("Field", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(stringResource(Res.string.sort_field_label), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
             OutlinedTextField(
                 value = fieldLabel(value),
@@ -203,10 +224,10 @@ private fun DirMenu(
 ) {
     var expanded by remember { mutableStateOf(false) }
     Column(modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text("Direction", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(stringResource(Res.string.sort_direction_label), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
             OutlinedTextField(
-                value = if (value == SortDir.ASC) "Ascending" else "Descending",
+                value = if (value == SortDir.ASC) stringResource(Res.string.sort_ascending) else stringResource(Res.string.sort_descending),
                 onValueChange = {},
                 readOnly = true,
                 singleLine = true,
@@ -214,17 +235,18 @@ private fun DirMenu(
                 modifier = Modifier.fillMaxWidth().menuAnchor()
             )
             ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                DropdownMenuItem(text = { Text("Ascending") }, onClick = { onValue(SortDir.ASC); expanded = false })
-                DropdownMenuItem(text = { Text("Descending") }, onClick = { onValue(SortDir.DESC); expanded = false })
+                DropdownMenuItem(text = { Text(stringResource(Res.string.sort_ascending)) }, onClick = { onValue(SortDir.ASC); expanded = false })
+                DropdownMenuItem(text = { Text(stringResource(Res.string.sort_descending)) }, onClick = { onValue(SortDir.DESC); expanded = false })
             }
         }
     }
 }
 
+@Composable
 private fun fieldLabel(f: SortField): String = when (f) {
-    SortField.PLANNED_AT -> "Planned time"
-    SortField.DEADLINE -> "Deadline"
-    SortField.IMPORTANCE -> "Priority"
-    SortField.CREATED_AT -> "Created"
-    SortField.TITLE -> "Title"
+    SortField.PLANNED_AT -> stringResource(Res.string.sort_field_planned)
+    SortField.DEADLINE -> stringResource(Res.string.sort_field_deadline)
+    SortField.IMPORTANCE -> stringResource(Res.string.sort_field_priority)
+    SortField.CREATED_AT -> stringResource(Res.string.sort_field_created)
+    SortField.TITLE -> stringResource(Res.string.sort_field_title)
 }
