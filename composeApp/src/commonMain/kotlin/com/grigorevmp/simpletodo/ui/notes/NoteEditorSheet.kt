@@ -574,9 +574,10 @@ fun NoteEditorScreen(
                                             start = 18.dp,
                                             end = 18.dp,
                                             top = 0.dp,
-                                            bottom = bottomBarHeightDp + if (imeVisible) imeBottomDp else navBottomDp
+                                            bottom = bottomBarHeightDp + navBottomDp
                                         ),
-                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                                        modifier = Modifier.imePadding()
                                     ) {
                                         item {
                                             OutlinedTextField(
@@ -1212,9 +1213,12 @@ private fun NoteBlocksPreview(blocks: List<BlockState>, notes: List<Note>) {
                 NoteBlockType.HEADING_3 -> MarkdownText(block.value.text, style = MaterialTheme.typography.titleMedium)
                 NoteBlockType.BULLET -> MarkdownText("• ${block.value.text}")
                 NoteBlockType.NUMBERED -> MarkdownText("${index + 1}. ${block.value.text}")
-                NoteBlockType.TODO -> MarkdownText(
-                    (if (block.checked) "[x] " else "[ ] ") + block.value.text
-                )
+                NoteBlockType.TODO -> {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Checkbox(checked = block.checked, onCheckedChange = null)
+                        MarkdownText(block.value.text, style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
                 NoteBlockType.QUOTE -> {
                     Surface(
                         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
