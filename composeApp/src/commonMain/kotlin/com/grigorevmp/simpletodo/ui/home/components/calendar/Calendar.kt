@@ -92,6 +92,7 @@ import simpletodo.composeapp.generated.resources.month_sep
 fun CalendarTab(
     tasks: List<TodoTask>,
     onToggleDone: (String) -> Unit,
+    onTogglePinned: (String) -> Unit,
     onToggleSub: (String, String) -> Unit,
     onOpenDetails: (TodoTask) -> Unit,
     onEdit: (TodoTask) -> Unit,
@@ -236,6 +237,7 @@ fun CalendarTab(
                                             onToggleSub = { subId -> onToggleSub(t.id, subId) },
                                             onOpenDetails = { onOpenDetails(t) },
                                             onEdit = { onEdit(t) },
+                                            onTogglePinned = { onTogglePinned(t.id) },
                                             onDelete = { onDelete(t.id) },
                                             onClearCompleted = onClearCompleted
                                         )
@@ -571,6 +573,7 @@ private fun CalendarTabPreview() {
     CalendarTab(
         tasks = tasks,
         onToggleDone = {},
+        onTogglePinned = {},
         onToggleSub = { _, _ -> },
         onOpenDetails = {},
         onEdit = {},

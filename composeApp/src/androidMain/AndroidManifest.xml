@@ -31,6 +31,16 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/tasks_widget_info" />
         </receiver>
+        <receiver
+            android:name=".widget.PinnedTasksWidgetReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/pinned_tasks_widget_info" />
+        </receiver>
 
         <activity
             android:name=".widget.MarkDoneActivity"
@@ -39,6 +49,10 @@
             android:excludeFromRecents="true"
             android:taskAffinity=""
             android:finishOnTaskLaunch="true" />
+
+        <receiver
+            android:name=".platform.PinnedTasksNotificationReceiver"
+            android:exported="false" />
     </application>
 
 </manifest>

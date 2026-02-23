@@ -58,7 +58,12 @@ import org.jetbrains.compose.resources.stringResource
 import simpletodo.composeapp.generated.resources.Res
 import simpletodo.composeapp.generated.resources.home_subtasks
 import simpletodo.composeapp.generated.resources.task_deadline_prefix
+import simpletodo.composeapp.generated.resources.task_delete
+import simpletodo.composeapp.generated.resources.task_edit
+import simpletodo.composeapp.generated.resources.task_pin
+import simpletodo.composeapp.generated.resources.task_pinned
 import simpletodo.composeapp.generated.resources.task_remaining_subs
+import simpletodo.composeapp.generated.resources.task_unpin
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -72,6 +77,7 @@ fun TaskCard(
     onToggleSub: (String) -> Unit,
     onOpenDetails: () -> Unit,
     onEdit: () -> Unit,
+    onTogglePinned: () -> Unit,
     onDelete: () -> Unit,
     onClearCompleted: () -> Unit,
     modifier: Modifier = Modifier
@@ -125,21 +131,30 @@ fun TaskCard(
                     .animateContentSize(animationSpec = tween(durationMillis = 100)),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                if (deadlineSoon || longEstimate) {
+                if (deadlineSoon || longEstimate || task.pinned) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (task.pinned) {
+                            StatusBanner(
+                                text = stringResource(Res.string.task_pinned),
+                                color = MaterialTheme.colorScheme.primary,
+                                onColor = MaterialTheme.colorScheme.onPrimary,
+                                icon = SimpleIcons.Star,
+                                showIconOnly = true,
+                            )
+                        }
                         if (deadlineSoon) {
                             StatusBanner(
                                 text = task.deadline?.let { deadlineLabel(it) } ?: "",
                                 color = MaterialTheme.colorScheme.error,
                                 onColor = MaterialTheme.colorScheme.onError,
-                                icon = FlameIcon
+                                icon = FlameIcon,
                             )
                         }
                         if (longEstimate) {
                             StatusBanner(
                                 text = "Долгая задача",
                                 color = MaterialTheme.colorScheme.onSurface,
-                                onColor = MaterialTheme.colorScheme.surface
+                                onColor = MaterialTheme.colorScheme.surface,
                             )
                         }
                     }
@@ -148,9 +163,7 @@ fun TaskCard(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     CircleCheckbox(
                         checked = task.done,
-                        onCheckedChange = { checked ->
-                            if (!task.done && checked) {
-                            }
+                        onCheckedChange = { _ ->
                             onToggleDone()
                         },
                         onTapOffset = null
@@ -295,7 +308,20 @@ fun TaskCard(
                     Modifier.padding(vertical = 6.dp)
                 ) {
                     DropdownMenuItem(
-                        text = { Text("Edit", style = MaterialTheme.typography.titleMedium) },
+                        text = {
+                            Text(
+                                if (task.pinned) stringResource(Res.string.task_unpin) else stringResource(Res.string.task_pin),
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                        },
+                        leadingIcon = { Icon(SimpleIcons.Star, contentDescription = null) },
+                        onClick = {
+                            showActions = false
+                            onTogglePinned()
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(Res.string.task_edit), style = MaterialTheme.typography.titleMedium) },
                         leadingIcon = { Icon(EditIcon, contentDescription = null) },
                         onClick = {
                             showActions = false
@@ -303,7 +329,7 @@ fun TaskCard(
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("Delete", style = MaterialTheme.typography.titleMedium) },
+                        text = { Text(stringResource(Res.string.task_delete), style = MaterialTheme.typography.titleMedium) },
                         leadingIcon = { Icon(DeleteIcon, contentDescription = null) },
                         onClick = {
                             showActions = false
@@ -412,7 +438,8 @@ private fun StatusBanner(
     text: String,
     color: androidx.compose.ui.graphics.Color,
     onColor: androidx.compose.ui.graphics.Color,
-    icon: androidx.compose.ui.graphics.vector.ImageVector? = null
+    icon: androidx.compose.ui.graphics.vector.ImageVector? = null,
+    showIconOnly :Boolean = false,
 ) {
     Surface(
         shape = MaterialTheme.shapes.small,
@@ -431,11 +458,14 @@ private fun StatusBanner(
                     modifier = Modifier.size(14.dp)
                 )
             }
-            Text(
-                text = text,
-                style = MaterialTheme.typography.labelLarge,
-                color = onColor
-            )
+
+            if (!showIconOnly || icon == null) {
+                Text(
+                    text = text,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = onColor
+                )
+            }
         }
     }
 }

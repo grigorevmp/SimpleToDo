@@ -38,6 +38,7 @@
     <string name="settings_subtitle">Tags, notifications, and behavior</string>
     <string name="settings_notifications_title">Notifications</string>
     <string name="settings_notifications_desc">Reminders are sent for planned time and deadline.</string>
+    <string name="settings_pinned_notifications_title">Pin pinned tasks in notifications (non-dismissible)</string>
     <string name="settings_lead_time_label">Lead time (minutes)</string>
     <string name="settings_theme_title">Theme</string>
     <string name="settings_theme_system">System</string>
@@ -91,12 +92,11 @@
     <string name="settings_account_profile">Profile</string>
     <string name="settings_account_devices">Devices</string>
     <string name="settings_account_subscription">Subscription</string>
-    <string name="settings_account_soon">Coming soon</string>
+    <string name="settings_account_soon">Work in progress</string>
 
     <string name="settings_status_title">App status</string>
     <string name="settings_status_desc">You are on a beta build. Update channels and telemetry are coming soon.</string>
     <string name="settings_status_badge_beta">Beta</string>
-    <string name="settings_status_badge_early">Early</string>
     <string name="settings_status_badge_local">Local data</string>
 
     <string name="settings_about_title">About</string>
@@ -158,8 +158,6 @@
     <string name="task_deadline_prefix">Deadline: %1$s</string>
     <string name="task_note_singular">Note</string>
     <string name="task_note_plural">Notes</string>
-    <string name="task_edit">Edit</string>
-    <string name="task_delete">Delete</string>
     <string name="task_clear_completed">Clear completed</string>
     <string name="task_deadline_overdue">Deadline passed</string>
     <string name="task_deadline_today">Deadline today</string>
@@ -198,12 +196,18 @@
     <string name="task_no_note">No note</string>
     <string name="task_note_label">Note</string>
     <string name="task_select_note">Select note</string>
+    <string name="task_pin">Pin</string>
+    <string name="task_unpin">Unpin</string>
     <string name="search_placeholder">Search...</string>
     <string name="task_close">Close</string>
     <string name="task_subtasks">Subtasks</string>
+    <string name="task_edit">Edit</string>
+    <string name="task_delete">Delete</string>
+    <string name="task_pinned">Pinned</string>
+    <string name="home_pinned_tasks">Pinned tasks</string>
 
     <string name="note_editor_new">New note</string>
-    <string name="note_editor_edit">Edit note</string>
+    <string name="note_editor_edit">Edit</string>
     <string name="note_editor_untitled">Untitled note</string>
     <string name="note_editor_edit_mode_cd">Edit mode</string>
     <string name="note_editor_preview_mode_cd">Preview mode</string>
@@ -218,6 +222,33 @@
     <string name="note_editor_create">Create</string>
     <string name="note_editor_save">Save</string>
     <string name="note_editor_save_cd">Save</string>
+    <string name="note_block_add">Add block</string>
+    <string name="note_block_duplicate">Duplicate</string>
+    <string name="note_block_delete">Delete block</string>
+    <string name="note_block_turn_into">Turn into</string>
+    <string name="note_slash_hint">Type / for blocks</string>
+    <string name="note_block_h1">Heading 1</string>
+    <string name="note_block_h2">Heading 2</string>
+    <string name="note_block_h3">Heading 3</string>
+    <string name="note_block_text">Text</string>
+    <string name="note_block_bullet">Bulleted list</string>
+    <string name="note_block_numbered">Numbered list</string>
+    <string name="note_block_todo">Todo</string>
+    <string name="note_block_quote">Quote</string>
+    <string name="note_block_code">Code</string>
+    <string name="note_block_divider">Divider</string>
+    <string name="note_block_callout">Callout</string>
+    <string name="note_block_table">Table</string>
+    <string name="note_block_kanban">Kanban</string>
+    <string name="note_block_attachment">Attachment</string>
+    <string name="note_block_note_link">Note link</string>
+    <string name="note_block_add_row">Add row</string>
+    <string name="note_block_add_column">Add column</string>
+    <string name="note_block_add_card">Add card</string>
+    <string name="note_block_add_column_label">Add column</string>
+    <string name="note_block_pick_file">Pick file</string>
+    <string name="note_block_open_file">Open</string>
+    <string name="note_block_linked_from">Linked from</string>
 
     <string name="notes_sort_title">Filters</string>
     <string name="notes_sort_subtitle">Pick ordering and folder priority.</string>

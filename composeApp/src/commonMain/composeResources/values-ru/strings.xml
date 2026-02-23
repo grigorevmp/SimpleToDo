@@ -38,6 +38,7 @@
     <string name="settings_subtitle">Теги, уведомления и поведение</string>
     <string name="settings_notifications_title">Уведомления</string>
     <string name="settings_notifications_desc">Напоминания приходят по плану и дедлайну.</string>
+    <string name="settings_pinned_notifications_title">Закрепить закрепленные задачи в уведомлениях (несмахиваемые)</string>
     <string name="settings_lead_time_label">Заранее (минут)</string>
     <string name="settings_theme_title">Тема</string>
     <string name="settings_theme_system">Система</string>
@@ -91,12 +92,11 @@
     <string name="settings_account_profile">Профиль</string>
     <string name="settings_account_devices">Устройства</string>
     <string name="settings_account_subscription">Подписка</string>
-    <string name="settings_account_soon">Скоро добавится</string>
+    <string name="settings_account_soon">В разработке</string>
 
     <string name="settings_status_title">Статус приложения</string>
     <string name="settings_status_desc">Вы используете бета-версию. Каналы обновлений и телеметрия появятся позже.</string>
     <string name="settings_status_badge_beta">Бета</string>
-    <string name="settings_status_badge_early">Ранний доступ</string>
     <string name="settings_status_badge_local">Локальные данные</string>
 
     <string name="settings_about_title">О приложении</string>
@@ -158,8 +158,6 @@
     <string name="task_deadline_prefix">Дедлайн: %1$s</string>
     <string name="task_note_singular">Заметка</string>
     <string name="task_note_plural">Заметки</string>
-    <string name="task_edit">Редактировать</string>
-    <string name="task_delete">Удалить</string>
     <string name="task_clear_completed">Очистить все выполненные</string>
     <string name="task_deadline_overdue">Дедлайн истёк</string>
     <string name="task_deadline_today">Дедлайн сегодня</string>
@@ -198,12 +196,18 @@
     <string name="task_no_note">Без заметки</string>
     <string name="task_note_label">Заметка</string>
     <string name="task_select_note">Выбрать заметку</string>
+    <string name="task_pin">Закрепить</string>
+    <string name="task_unpin">Открепить</string>
     <string name="search_placeholder">Поиск...</string>
     <string name="task_close">Закрыть</string>
     <string name="task_subtasks">Подзадачи</string>
+    <string name="task_edit">Редактировать</string>
+    <string name="task_delete">Удалить</string>
+    <string name="task_pinned">Закреплено</string>
+    <string name="home_pinned_tasks">Закрепленные задачи</string>
 
     <string name="note_editor_new">Новая заметка</string>
-    <string name="note_editor_edit">Редактировать заметку</string>
+    <string name="note_editor_edit">Редактировать</string>
     <string name="note_editor_untitled">Заметка без названия</string>
     <string name="note_editor_edit_mode_cd">Режим редактирования</string>
     <string name="note_editor_preview_mode_cd">Режим предпросмотра</string>
@@ -218,6 +222,33 @@
     <string name="note_editor_create">Создать</string>
     <string name="note_editor_save">Сохранить</string>
     <string name="note_editor_save_cd">Сохранить</string>
+    <string name="note_block_add">Добавить блок</string>
+    <string name="note_block_duplicate">Дублировать</string>
+    <string name="note_block_delete">Удалить блок</string>
+    <string name="note_block_turn_into">Преобразовать</string>
+    <string name="note_slash_hint">Введите / для блоков</string>
+    <string name="note_block_h1">Заголовок 1</string>
+    <string name="note_block_h2">Заголовок 2</string>
+    <string name="note_block_h3">Заголовок 3</string>
+    <string name="note_block_text">Текст</string>
+    <string name="note_block_bullet">Маркированный список</string>
+    <string name="note_block_numbered">Нумерованный список</string>
+    <string name="note_block_todo">Чек‑лист</string>
+    <string name="note_block_quote">Цитата</string>
+    <string name="note_block_code">Код</string>
+    <string name="note_block_divider">Разделитель</string>
+    <string name="note_block_callout">Callout</string>
+    <string name="note_block_table">Таблица</string>
+    <string name="note_block_kanban">Канбан</string>
+    <string name="note_block_attachment">Вложение</string>
+    <string name="note_block_note_link">Ссылка на заметку</string>
+    <string name="note_block_add_row">Добавить строку</string>
+    <string name="note_block_add_column">Добавить колонку</string>
+    <string name="note_block_add_card">Добавить карточку</string>
+    <string name="note_block_add_column_label">Добавить колонку</string>
+    <string name="note_block_pick_file">Выбрать файл</string>
+    <string name="note_block_open_file">Открыть</string>
+    <string name="note_block_linked_from">Связано с</string>
 
     <string name="notes_sort_title">Фильтры</string>
     <string name="notes_sort_subtitle">Выберите порядок и приоритет папок.</string>

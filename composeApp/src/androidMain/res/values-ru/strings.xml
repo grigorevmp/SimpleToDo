@@ -7,4 +7,9 @@
     <string name="widget_tomorrow">Завтра</string>
     <string name="widget_overdue">Просрочено</string>
     <string name="widget_untitled">(без названия)</string>
+    <string name="pinned_notification_title">Закрепленные задачи</string>
+    <string name="pinned_notification_more">+%1$d еще</string>
+    <string name="widget_pinned_description">Список закрепленных задач.</string>
+    <string name="widget_pinned_placeholder">Загрузка закрепленных...</string>
+    <string name="widget_pinned_empty">Нет закрепленных задач</string>
 </resources>

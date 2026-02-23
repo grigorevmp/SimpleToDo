@@ -11,10 +11,10 @@ import androidx.work.WorkManager
 import androidx.work.Worker
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
+import com.grigorevmp.simpletodo.R
 import com.grigorevmp.simpletodo.model.TodoTask
 import kotlinx.datetime.Clock
 import java.util.concurrent.TimeUnit
-import kotlin.math.max
 
 private const val CHANNEL_ID = "simpletodo_reminders"
 private const val CHANNEL_NAME = "Simple TODO reminders"
@@ -39,7 +39,8 @@ private class AndroidNotificationScheduler(
 
         // Planned time notification (at planned time)
         task.plannedAt?.let { planned ->
-            val delayMs = max(0L, planned.toEpochMilliseconds() - now)
+            val delayMs = planned.toEpochMilliseconds() - now
+            if (delayMs <= 0L) return@let
             val data = workDataOf(
                 ReminderWorker.KEY_TASK_ID to task.id,
                 ReminderWorker.KEY_TITLE to task.title,
@@ -58,7 +59,8 @@ private class AndroidNotificationScheduler(
         // Deadline notification (lead time before deadline)
         task.deadline?.let { deadline ->
             val remindAt = deadline.toEpochMilliseconds() - leadMinutes.toLong() * 60_000L
-            val delayMs = max(0L, remindAt - now)
+            val delayMs = remindAt - now
+            if (delayMs <= 0L) return@let
             val data = workDataOf(
                 ReminderWorker.KEY_TASK_ID to task.id,
                 ReminderWorker.KEY_TITLE to task.title,
@@ -117,7 +119,7 @@ class ReminderWorker(
         val text = if (plan.isBlank()) "$prefix — check this task" else "$prefix — $plan"
 
         val notif = NotificationCompat.Builder(applicationContext, CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.ic_popup_reminder)
+            .setSmallIcon(R.drawable.ic_stat_atom)
             .setContentTitle(title)
             .setContentText(text)
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))

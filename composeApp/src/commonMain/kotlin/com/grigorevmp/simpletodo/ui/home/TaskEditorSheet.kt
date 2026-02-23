@@ -380,9 +380,24 @@ fun TaskEditorSheet(
 
 @Composable
 private fun ImportancePicker(current: Importance, onPick: (Importance) -> Unit) {
-    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        Importance.entries.forEach { i ->
-            FilterChip(selected = current == i, onClick = { onPick(i) }, label = { Text(label(i)) })
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Importance.entries.toList().chunked(2).forEach { rowItems ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                rowItems.forEach { i ->
+                    FilterChip(
+                        selected = current == i,
+                        onClick = { onPick(i) },
+                        label = { Text(label(i)) },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                if (rowItems.size == 1) {
+                    Spacer(modifier = Modifier.weight(1f))
+                }
+            }
         }
     }
 }

@@ -175,4 +175,47 @@ object SimpleIcons {
             close()
         }
     }.build()
+
+    val More: ImageVector = ImageVector.Builder(
+        name = "More",
+        defaultWidth = 24.dp,
+        defaultHeight = 24.dp,
+        viewportWidth = 24f,
+        viewportHeight = 24f
+    ).apply {
+        path(fill = SolidColor(Color.Black), pathFillType = PathFillType.NonZero) {
+            moveTo(6f, 12f)
+            lineTo(8f, 12f)
+            lineTo(8f, 14f)
+            lineTo(6f, 14f)
+            close()
+            moveTo(11f, 12f)
+            lineTo(13f, 12f)
+            lineTo(13f, 14f)
+            lineTo(11f, 14f)
+            close()
+            moveTo(16f, 12f)
+            lineTo(18f, 12f)
+            lineTo(18f, 14f)
+            lineTo(16f, 14f)
+            close()
+        }
+    }.build()
+
+    val Drag: ImageVector = ImageVector.Builder(
+        name = "Drag",
+        defaultWidth = 24.dp,
+        defaultHeight = 24.dp,
+        viewportWidth = 24f,
+        viewportHeight = 24f
+    ).apply {
+        path(fill = SolidColor(Color.Black), pathFillType = PathFillType.NonZero) {
+            moveTo(7f, 6f); lineTo(9f, 6f); lineTo(9f, 8f); lineTo(7f, 8f); close()
+            moveTo(7f, 11f); lineTo(9f, 11f); lineTo(9f, 13f); lineTo(7f, 13f); close()
+            moveTo(7f, 16f); lineTo(9f, 16f); lineTo(9f, 18f); lineTo(7f, 18f); close()
+            moveTo(14f, 6f); lineTo(16f, 6f); lineTo(16f, 8f); lineTo(14f, 8f); close()
+            moveTo(14f, 11f); lineTo(16f, 11f); lineTo(16f, 13f); lineTo(14f, 13f); close()
+            moveTo(14f, 16f); lineTo(16f, 16f); lineTo(16f, 18f); lineTo(14f, 18f); close()
+        }
+    }.build()
 }

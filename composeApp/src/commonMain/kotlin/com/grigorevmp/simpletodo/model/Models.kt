@@ -30,10 +30,90 @@ data class NoteFolder(
 )
 
 @Serializable
+sealed class NoteBlock {
+    abstract val id: String
+    @kotlinx.serialization.SerialName("blockType")
+    abstract val type: NoteBlockType
+}
+
+@Serializable
+enum class NoteBlockType {
+    HEADING_1,
+    HEADING_2,
+    HEADING_3,
+    PARAGRAPH,
+    BULLET,
+    NUMBERED,
+    TODO,
+    QUOTE,
+    CODE,
+    DIVIDER,
+    CALLOUT,
+    TABLE,
+    KANBAN,
+    ATTACHMENT,
+    NOTE_LINK
+}
+
+@Serializable
+data class TextBlock(
+    override val id: String,
+    val text: String,
+    override val type: NoteBlockType = NoteBlockType.PARAGRAPH,
+    val checked: Boolean = false
+) : NoteBlock()
+
+@Serializable
+data class DividerBlock(
+    override val id: String,
+    override val type: NoteBlockType = NoteBlockType.DIVIDER
+) : NoteBlock()
+
+@Serializable
+data class TableBlock(
+    override val id: String,
+    val rows: Int,
+    val cols: Int,
+    val cells: List<List<String>>,
+    override val type: NoteBlockType = NoteBlockType.TABLE
+) : NoteBlock()
+
+@Serializable
+data class KanbanColumn(
+    val id: String,
+    val title: String,
+    val cards: List<String>
+)
+
+@Serializable
+data class KanbanBlock(
+    override val id: String,
+    val columns: List<KanbanColumn>,
+    override val type: NoteBlockType = NoteBlockType.KANBAN
+) : NoteBlock()
+
+@Serializable
+data class AttachmentBlock(
+    override val id: String,
+    val uri: String,
+    val name: String? = null,
+    val mime: String? = null,
+    override val type: NoteBlockType = NoteBlockType.ATTACHMENT
+) : NoteBlock()
+
+@Serializable
+data class NoteLinkBlock(
+    override val id: String,
+    val noteId: String,
+    override val type: NoteBlockType = NoteBlockType.NOTE_LINK
+) : NoteBlock()
+
+@Serializable
 data class Note(
     val id: String,
     val title: String,
     val content: String,
+    val blocks: List<NoteBlock> = emptyList(),
     val taskId: String? = null,
     val folderId: String? = null,
     val favorite: Boolean = false,
@@ -60,7 +140,8 @@ data class TodoTask(
     @Contextual val deadline: Instant? = null,
     val importance: Importance = Importance.NORMAL,
     val tagId: String? = null,
-    val done: Boolean = false
+    val done: Boolean = false,
+    val pinned: Boolean = false
 )
 
 @Serializable
@@ -100,6 +181,7 @@ data class AppPrefs(
     val noteSort: NoteSortConfig = NoteSortConfig(),
     val showTagFilters: Boolean = false,
     val showCompletedTasks: Boolean = false,
+    val pinPinnedInNotifications: Boolean = false,
     val dimScroll: Boolean = true,
     val liquidGlass: Boolean = true,
     val disableDarkTheme: Boolean = false,

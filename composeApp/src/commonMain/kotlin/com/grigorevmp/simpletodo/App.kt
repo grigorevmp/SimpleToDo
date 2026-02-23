@@ -11,6 +11,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -44,6 +45,9 @@ fun App() {
 
     val dark = isSystemInDarkTheme()
     val prefs by component.repo.prefs.collectAsState()
+    LaunchedEffect(Unit) {
+        component.repo.refreshNotificationsOnLaunch()
+    }
     LaunchedEffect(prefs.language) {
         applyAppLanguage(prefs.language)
     }
@@ -80,6 +84,7 @@ fun App() {
         }
         val createTaskSignal = remember { androidx.compose.runtime.mutableIntStateOf(0) }
         val createNoteSignal = remember { androidx.compose.runtime.mutableIntStateOf(0) }
+        var notesEditorVisible by remember { androidx.compose.runtime.mutableStateOf(false) }
         val openNoteId = remember { androidx.compose.runtime.mutableStateOf<String?>(null) }
         val backgroundColor = MaterialTheme.colorScheme.background
         val backdrop = rememberLayerBackdrop {
@@ -143,7 +148,8 @@ fun App() {
                                     createNoteSignal = createNoteSignal.intValue,
                                     onCreateNoteHandled = { createNoteSignal.intValue = 0 },
                                     openNoteId = openNoteId.value,
-                                    onOpenNoteHandled = { openNoteId.value = null }
+                                    onOpenNoteHandled = { openNoteId.value = null },
+                                    onEditorVisibleChange = { notesEditorVisible = it }
                                 )
                             }
                             composable("settings") { SettingsScreen(component.repo) }
@@ -151,61 +157,63 @@ fun App() {
                     }
                 }
 
+                if (!notesEditorVisible) {
                     PlatformBottomBar(
                         tab = tab,
                         onTab = { target ->
                             val route = when (target) {
                                 AppTab.HOME -> "home"
-                            AppTab.NOTES -> "notes"
-                            AppTab.SETTINGS -> "settings"
-                        }
-                        if (isIos) {
-                            iosRoute.value = route
-                        } else if (currentRoute != route) {
-                            navController.navigate(route) { launchSingleTop = true }
-                        }
-                    },
-                    createActions = when (tab) {
-                        AppTab.HOME -> listOf(
-                            CreateAction(
-                                id = "new_task",
-                                label = stringResource(Res.string.action_new),
-                                contentDescription = "Create task",
-                                icon = AddIcon,
-                                onClick = {
-                                    if (isIos) {
-                                        iosRoute.value = "home"
-                                    } else if (currentRoute != "home") {
-                                        navController.navigate("home") { launchSingleTop = true }
+                                AppTab.NOTES -> "notes"
+                                AppTab.SETTINGS -> "settings"
+                            }
+                            if (isIos) {
+                                iosRoute.value = route
+                            } else if (currentRoute != route) {
+                                navController.navigate(route) { launchSingleTop = true }
+                            }
+                        },
+                        createActions = when (tab) {
+                            AppTab.HOME -> listOf(
+                                CreateAction(
+                                    id = "new_task",
+                                    label = stringResource(Res.string.action_new),
+                                    contentDescription = "Create task",
+                                    icon = AddIcon,
+                                    onClick = {
+                                        if (isIos) {
+                                            iosRoute.value = "home"
+                                        } else if (currentRoute != "home") {
+                                            navController.navigate("home") { launchSingleTop = true }
+                                        }
+                                        createTaskSignal.intValue += 1
                                     }
-                                    createTaskSignal.intValue += 1
-                                }
+                                )
                             )
-                        )
-                        AppTab.NOTES -> listOf(
-                            CreateAction(
-                                id = "new_note",
-                                label = stringResource(Res.string.action_new),
-                                contentDescription = "Create note",
-                                icon = AddIcon,
-                                onClick = {
-                                    if (isIos) {
-                                        iosRoute.value = "notes"
-                                    } else if (currentRoute != "notes") {
-                                        navController.navigate("notes") { launchSingleTop = true }
+                            AppTab.NOTES -> listOf(
+                                CreateAction(
+                                    id = "new_note",
+                                    label = stringResource(Res.string.action_new),
+                                    contentDescription = "Create note",
+                                    icon = AddIcon,
+                                    onClick = {
+                                        if (isIos) {
+                                            iosRoute.value = "notes"
+                                        } else if (currentRoute != "notes") {
+                                            navController.navigate("notes") { launchSingleTop = true }
+                                        }
+                                        createNoteSignal.intValue += 1
                                     }
-                                    createNoteSignal.intValue += 1
-                                }
+                                )
                             )
-                        )
-                        AppTab.SETTINGS -> emptyList()
-                    },
-                    enableEffects = prefs.liquidGlass && !isIos,
-                    backdrop = backdrop,
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(horizontal = 22.dp, vertical = if (isIos) 8.dp else 12.dp)
-                )
+                            AppTab.SETTINGS -> emptyList()
+                        },
+                        enableEffects = prefs.liquidGlass && !isIos,
+                        backdrop = backdrop,
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(horizontal = 22.dp, vertical = if (isIos) 8.dp else 12.dp)
+                    )
+                }
             }
         }
     }

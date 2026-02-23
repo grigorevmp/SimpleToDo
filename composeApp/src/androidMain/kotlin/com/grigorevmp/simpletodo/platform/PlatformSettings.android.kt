@@ -14,5 +14,5 @@ internal object AndroidContextHolder {
 
 actual fun createPlatformSettings(): Settings {
     val sp = AndroidContextHolder.appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-    return SharedPreferencesSettings(sp)
+    return SharedPreferencesSettings(sp, commit = true)
 }

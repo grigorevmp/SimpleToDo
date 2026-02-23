@@ -370,6 +370,7 @@ private data class WidgetStrings(
 
 private fun sortedTasks(tasks: List<TodoTask>, prefs: AppPrefs): List<TodoTask> {
     val sort = prefs.sort
+    val pinnedCmp = compareBy<TodoTask> { if (it.pinned) 0 else 1 }
     val doneCmp = compareBy<TodoTask> { it.done }
     val now = nowInstant().toEpochMilliseconds()
 
@@ -381,7 +382,7 @@ private fun sortedTasks(tasks: List<TodoTask>, prefs: AppPrefs): List<TodoTask> 
         val primaryCmp = if (sort.primaryDir == SortDir.ASC) plannedCmp else plannedCmp.reversed()
         val secondaryCmp = if (sort.secondaryDir == SortDir.ASC) deadlineCmp else deadlineCmp.reversed()
 
-        return tasks.sortedWith(doneCmp.then(overdueCmp).then(primaryCmp).then(secondaryCmp))
+        return tasks.sortedWith(pinnedCmp.then(doneCmp).then(overdueCmp).then(primaryCmp).then(secondaryCmp))
     }
 
     val cmp = compareBy<TodoTask> { sortKey(it, sort.primary) }
@@ -390,7 +391,7 @@ private fun sortedTasks(tasks: List<TodoTask>, prefs: AppPrefs): List<TodoTask> 
     val cmp2 = compareBy<TodoTask> { sortKey(it, sort.secondary) }
     val secondaryCmp = if (sort.secondaryDir == SortDir.ASC) cmp2 else cmp2.reversed()
 
-    return tasks.sortedWith(doneCmp.then(primaryCmp).then(secondaryCmp))
+    return tasks.sortedWith(pinnedCmp.then(doneCmp).then(primaryCmp).then(secondaryCmp))
 }
 
 private fun plannedSortKey(task: TodoTask, nowMs: Long): Long {
@@ -429,7 +430,7 @@ private fun importanceRank(i: Importance): Int = when (i) {
 }
 
 @Composable
-private fun DoneButton(taskId: String) {
+internal fun DoneButton(taskId: String) {
     val intent = Intent()
         .setClassName("com.grigorevmp.simpletodo", "com.grigorevmp.simpletodo.widget.MarkDoneActivity")
         .putExtra(EXTRA_TASK_ID, taskId)
@@ -471,7 +472,7 @@ class MarkDoneActivity : Activity() {
         val tasks = runCatching { json.decodeFromString(ListSerializer(TodoTask.serializer()), raw) }
             .getOrElse { emptyList() }
         val updated = tasks.map { if (it.id == taskId) it.copy(done = true) else it }
-        prefs.edit {
+        prefs.edit(commit = true) {
             putString(
                 TASKS_KEY,
                 json.encodeToString(ListSerializer(TodoTask.serializer()), updated)
@@ -479,6 +480,8 @@ class MarkDoneActivity : Activity() {
         }
         CoroutineScope(SupervisorJob() + Dispatchers.Default).launch {
             TasksWidget().updateAll(applicationContext)
+            PinnedTasksWidget().updateAll(applicationContext)
+            com.grigorevmp.simpletodo.platform.requestPinnedTasksNotificationUpdate()
         }
     }
 }

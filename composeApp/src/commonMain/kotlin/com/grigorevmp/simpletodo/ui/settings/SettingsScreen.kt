@@ -122,10 +122,10 @@ import simpletodo.composeapp.generated.resources.settings_manage_tags_title
 import simpletodo.composeapp.generated.resources.settings_new_tag_label
 import simpletodo.composeapp.generated.resources.settings_notifications_desc
 import simpletodo.composeapp.generated.resources.settings_notifications_title
+import simpletodo.composeapp.generated.resources.settings_pinned_notifications_title
 import simpletodo.composeapp.generated.resources.settings_open
 import simpletodo.composeapp.generated.resources.settings_selected
 import simpletodo.composeapp.generated.resources.settings_status_badge_beta
-import simpletodo.composeapp.generated.resources.settings_status_badge_early
 import simpletodo.composeapp.generated.resources.settings_status_badge_local
 import simpletodo.composeapp.generated.resources.settings_status_desc
 import simpletodo.composeapp.generated.resources.settings_status_title
@@ -213,11 +213,7 @@ fun SettingsScreen(
             }
 
             item {
-                StatusCard()
-            }
-
-            item {
-                VersionAndResourcesCard(
+                AppStatusAndAboutCard(
                     onShowChangelog = { showChangelog = true },
                     onOpenUrl = { url -> uriHandler.openUri(url) }
                 )
@@ -254,6 +250,24 @@ fun SettingsScreen(
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                stringResource(Res.string.settings_pinned_notifications_title),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.weight(1f).padding(end = 12.dp)
+                            )
+                            Switch(
+                                checked = prefs.pinPinnedInNotifications,
+                                onCheckedChange = { enabled ->
+                                    scope.launch { repo.setPinnedNotifications(enabled) }
+                                }
+                            )
+                        }
                         OutlinedTextField(
                             value = leadMinutesText,
                             onValueChange = { text ->
@@ -975,13 +989,17 @@ private fun RepairOverlay(
 }
 
 @Composable
-private fun StatusCard() {
+private fun AppStatusAndAboutCard(
+    onShowChangelog: () -> Unit,
+    onOpenUrl: (String) -> Unit
+) {
     val gradient = Brush.linearGradient(
         listOf(
             MaterialTheme.colorScheme.primary.copy(alpha = 0.16f),
             MaterialTheme.colorScheme.tertiary.copy(alpha = 0.42f)
         )
     )
+    val versionName = remember { AppInfo.versionName }
 
     Surface(
         shape = MaterialTheme.shapes.large,
@@ -992,7 +1010,7 @@ private fun StatusCard() {
                 .fillMaxWidth()
                 .background(gradient)
                 .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(stringResource(Res.string.settings_status_title), style = MaterialTheme.typography.titleMedium)
             Text(
@@ -1002,50 +1020,42 @@ private fun StatusCard() {
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 AccountPill(text = stringResource(Res.string.settings_status_badge_beta))
-                AccountPill(text = stringResource(Res.string.settings_status_badge_early))
                 AccountPill(text = stringResource(Res.string.settings_status_badge_local))
             }
-        }
-    }
-}
 
-@Composable
-private fun VersionAndResourcesCard(
-    onShowChangelog: () -> Unit,
-    onOpenUrl: (String) -> Unit
-) {
-    val versionName = remember { AppInfo.versionName }
-    Surface(
-        shape = MaterialTheme.shapes.large,
-        tonalElevation = 4.dp
-    ) {
-        Column(
-            Modifier.fillMaxWidth().padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            Text(stringResource(Res.string.settings_about_title), style = MaterialTheme.typography.titleMedium)
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .clip(MaterialTheme.shapes.medium)
-                    .clickable { onShowChangelog() }
-                    .padding(vertical = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+            Surface(
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
+                shape = MaterialTheme.shapes.large,
+                tonalElevation = 0.dp
             ) {
-                Column {
-                    Text(stringResource(Res.string.settings_version_title), style = MaterialTheme.typography.labelMedium)
-                    Text(versionName, style = MaterialTheme.typography.bodyMedium)
+                Column(
+                    Modifier.fillMaxWidth().padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .clip(MaterialTheme.shapes.medium)
+                            .clickable { onShowChangelog() }
+                            .padding(vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text(stringResource(Res.string.settings_version_title), style = MaterialTheme.typography.labelMedium)
+                            Text(versionName, style = MaterialTheme.typography.bodyMedium)
+                        }
+                        Text(
+                            stringResource(Res.string.settings_changelog),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        ResourceLink(stringResource(Res.string.settings_link_github), "https://github.com/grigorevmp/SimpleToDo", onOpenUrl)
+                        ResourceLink(stringResource(Res.string.settings_link_contact), "https://t.me/grigorevmp", onOpenUrl)
+                    }
                 }
-                Text(
-                    stringResource(Res.string.settings_changelog),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                ResourceLink(stringResource(Res.string.settings_link_github), "https://github.com/grigorevmp/SimpleToDo", onOpenUrl)
-                ResourceLink(stringResource(Res.string.settings_link_contact), "https://t.me/grigorevmp", onOpenUrl)
             }
         }
     }
@@ -1088,5 +1098,5 @@ fun RepairOverlayPreview() {
 @Preview
 @Composable
 fun StatusCardPreview() {
-    StatusCard()
+    AppStatusAndAboutCard(onShowChangelog = {}, onOpenUrl = {})
 }

@@ -15,6 +15,8 @@ import com.grigorevmp.simpletodo.model.ThemeMode
 import com.grigorevmp.simpletodo.model.TodoTask
 import com.grigorevmp.simpletodo.model.AppLanguage
 import com.grigorevmp.simpletodo.platform.NotificationScheduler
+import com.grigorevmp.simpletodo.platform.commitTasksJson
+import com.grigorevmp.simpletodo.platform.requestPinnedTasksNotificationUpdate
 import com.grigorevmp.simpletodo.platform.requestTasksWidgetUpdate
 import com.grigorevmp.simpletodo.util.newId
 import com.grigorevmp.simpletodo.util.nowInstant
@@ -44,6 +46,7 @@ class TodoRepository(
     private val json = Json {
         ignoreUnknownKeys = true
         encodeDefaults = true
+        classDiscriminator = "blockKind"
         serializersModule = SerializersModule {
             contextual(Instant::class, InstantAsStringSerializer)
         }
@@ -79,8 +82,11 @@ class TodoRepository(
     }
 
     private fun saveTasks(list: List<TodoTask>) {
-        settings.putString(tasksKey, json.encodeToString(ListSerializer(TodoTask.serializer()), list))
+        val encoded = json.encodeToString(ListSerializer(TodoTask.serializer()), list)
+        settings.putString(tasksKey, encoded)
+        commitTasksJson(encoded)
         requestTasksWidgetUpdate()
+        requestPinnedTasksNotificationUpdate()
     }
 
     private fun loadNotes(): List<Note> {
@@ -136,6 +142,7 @@ class TodoRepository(
 
     private fun savePrefs(prefs: AppPrefs) {
         settings.putString(prefsKey, json.encodeToString(AppPrefs.serializer(), prefs))
+        requestPinnedTasksNotificationUpdate()
     }
 
     suspend fun addTask(
@@ -163,7 +170,8 @@ class TodoRepository(
                 deadline = deadline,
                 importance = importance,
                 tagId = tagId,
-                done = false
+                done = false,
+                pinned = false
             )
             val newList = (_tasks.value + task)
             _tasks.value = newList
@@ -213,6 +221,16 @@ class TodoRepository(
         }
     }
 
+    suspend fun togglePinned(taskId: String) {
+        mutex.withLock {
+            val newList = _tasks.value.map {
+                if (it.id == taskId) it.copy(pinned = !it.pinned) else it
+            }
+            _tasks.value = newList
+            saveTasks(newList)
+        }
+    }
+
     suspend fun toggleSubtask(taskId: String, subtaskId: String) {
         mutex.withLock {
             val updated = _tasks.value.map { t ->
@@ -232,6 +250,7 @@ class TodoRepository(
     suspend fun addNote(
         title: String,
         content: String,
+        blocks: List<com.grigorevmp.simpletodo.model.NoteBlock> = emptyList(),
         taskId: String?,
         folderId: String?,
         favorite: Boolean = false
@@ -242,6 +261,7 @@ class TodoRepository(
                 id = newId("note"),
                 title = title.trim(),
                 content = content,
+                blocks = blocks,
                 taskId = taskId,
                 folderId = folderId,
                 favorite = favorite,
@@ -428,6 +448,21 @@ class TodoRepository(
         }
     }
 
+    suspend fun setPinnedNotifications(enabled: Boolean) {
+        mutex.withLock {
+            val p = _prefs.value.copy(pinPinnedInNotifications = enabled)
+            _prefs.value = p
+            savePrefs(p)
+        }
+    }
+
+    suspend fun refreshNotificationsOnLaunch() {
+        mutex.withLock {
+            rescheduleAllLocked()
+            requestPinnedTasksNotificationUpdate()
+        }
+    }
+
     suspend fun addTag(name: String) {
         mutex.withLock {
             val trimmed = name.trim()
@@ -540,6 +575,7 @@ class TodoRepository(
 
     fun sortedTasks(tasks: List<TodoTask>, prefs: AppPrefs): List<TodoTask> {
         val sort = prefs.sort
+        val pinnedCmp = compareBy<TodoTask> { if (it.pinned) 0 else 1 }
         val doneCmp = compareBy<TodoTask> { it.done }
 
         val now = nowInstant().toEpochMilliseconds()
@@ -552,7 +588,7 @@ class TodoRepository(
             val primaryCmp = if (sort.primaryDir == SortDir.ASC) plannedCmp else plannedCmp.reversed()
             val secondaryCmp = if (sort.secondaryDir == SortDir.ASC) deadlineCmp else deadlineCmp.reversed()
 
-            return tasks.sortedWith(doneCmp.then(overdueCmp).then(primaryCmp).then(secondaryCmp))
+            return tasks.sortedWith(pinnedCmp.then(doneCmp).then(overdueCmp).then(primaryCmp).then(secondaryCmp))
         }
 
         val cmp = compareBy<TodoTask> { sortKey(it, sort.primary) }
@@ -561,7 +597,7 @@ class TodoRepository(
         val cmp2 = compareBy<TodoTask> { sortKey(it, sort.secondary) }
         val secondaryCmp = if (sort.secondaryDir == SortDir.ASC) cmp2 else cmp2.reversed()
 
-        return tasks.sortedWith(doneCmp.then(primaryCmp).then(secondaryCmp))
+        return tasks.sortedWith(pinnedCmp.then(doneCmp).then(primaryCmp).then(secondaryCmp))
     }
 
     private fun plannedSortKey(task: TodoTask, nowMs: Long): Long {
@@ -606,6 +642,7 @@ class TodoRepository(
         if (!p.remindersEnabled) return
         if (task.done) return
         if (task.deadline == null) return
+        if (isOverdue(task, nowInstant().toEpochMilliseconds())) return
 
         scheduler.schedule(task, p.reminderLeadMinutes)
     }
@@ -616,7 +653,7 @@ class TodoRepository(
         if (!p.remindersEnabled) return
 
         _tasks.value.forEach { t ->
-            if (!t.done && t.deadline != null) {
+            if (!t.done && t.deadline != null && !isOverdue(t, nowInstant().toEpochMilliseconds())) {
                 scheduler.schedule(t, p.reminderLeadMinutes)
             }
         }

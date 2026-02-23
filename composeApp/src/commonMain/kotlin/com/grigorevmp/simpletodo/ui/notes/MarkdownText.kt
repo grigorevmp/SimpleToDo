@@ -7,17 +7,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
 @Composable
-fun MarkdownText(markdown: String, modifier: Modifier = Modifier) {
+fun MarkdownText(markdown: String, modifier: Modifier = Modifier, style: TextStyle = MaterialTheme.typography.bodyMedium) {
     val typography = MaterialTheme.typography
     val colors = MaterialTheme.colorScheme
     val annotated = buildMarkdownAnnotatedString(markdown, colors.onSurfaceVariant)
-    Text(text = annotated, style = typography.bodyMedium, modifier = modifier)
+    Text(text = annotated, style = style, modifier = modifier)
 }
 
 private fun buildMarkdownAnnotatedString(markdown: String, mutedColor: Color): AnnotatedString {

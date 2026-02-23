@@ -114,7 +114,8 @@ fun NotesScreen(
     createNoteSignal: Int,
     onCreateNoteHandled: () -> Unit,
     openNoteId: String?,
-    onOpenNoteHandled: () -> Unit
+    onOpenNoteHandled: () -> Unit,
+    onEditorVisibleChange: (Boolean) -> Unit = {}
 ) {
     val tasks by repo.tasks.collectAsState()
     val notes by repo.notes.collectAsState()
@@ -210,6 +211,10 @@ fun NotesScreen(
             showEditor = true
         }
         onOpenNoteHandled()
+    }
+
+    LaunchedEffect(showEditor) {
+        onEditorVisibleChange(showEditor)
     }
 
     Column(Modifier.fillMaxSize()) {
@@ -442,18 +447,32 @@ fun NotesScreen(
 private fun NotesTopBar(path: List<NoteFolder>, onSort: () -> Unit) {
     val title = if (path.isEmpty()) stringResource(Res.string.notes_title) else path.last().name
     Row(
-        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 18.dp, vertical = 14.dp)
+            .height(48.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(title, style = MaterialTheme.typography.titleLarge)
-        IconButton(onClick = onSort) {
-            PlatformIcon(
-                id = AppIconId.Filter,
-                contentDescription = stringResource(Res.string.notes_filter_cd),
-                tint = LocalContentColor.current,
-                modifier = Modifier.size(22.dp)
-            )
+        Row {
+            Spacer(Modifier.width(12.dp))
+            IconButton(onClick = {}, enabled = false) {
+                PlatformIcon(
+                    id = AppIconId.Tag,
+                    contentDescription = null,
+                    tint = LocalContentColor.current.copy(alpha = 0f),
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+            IconButton(onClick = onSort) {
+                PlatformIcon(
+                    id = AppIconId.Filter,
+                    contentDescription = stringResource(Res.string.notes_filter_cd),
+                    tint = LocalContentColor.current,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
         }
     }
 }
@@ -542,7 +561,7 @@ private fun NoteRow(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-                    val snippet = noteSnippet(note.content)
+                    val snippet = noteSnippet(note)
                     if (snippet.isNotEmpty()) {
                         Text(
                             snippet,
@@ -916,7 +935,17 @@ private fun notesComparator(field: NoteSortField): Comparator<NotesListItem> {
     }
 }
 
-private fun noteSnippet(content: String): String {
+private fun noteSnippet(note: Note): String {
+    val blockText = note.blocks.asSequence()
+        .mapNotNull { block ->
+            when (block) {
+                is com.grigorevmp.simpletodo.model.TextBlock -> block.text.trim()
+                is com.grigorevmp.simpletodo.model.DividerBlock -> null
+                else -> null
+            }
+        }
+        .firstOrNull { it.isNotEmpty() }
+    val content = blockText ?: note.content
     val line = content.lineSequence().map { it.trim() }.firstOrNull { it.isNotEmpty() } ?: return ""
     return line
         .removePrefix("#")

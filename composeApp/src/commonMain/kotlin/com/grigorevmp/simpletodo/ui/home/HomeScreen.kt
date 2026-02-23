@@ -118,6 +118,7 @@ import simpletodo.composeapp.generated.resources.home_motivation_6
 import simpletodo.composeapp.generated.resources.home_no_content
 import simpletodo.composeapp.generated.resources.home_no_deadline
 import simpletodo.composeapp.generated.resources.home_note_plural
+import simpletodo.composeapp.generated.resources.home_pinned_tasks
 import simpletodo.composeapp.generated.resources.home_note_singular
 import simpletodo.composeapp.generated.resources.home_notes_linked_to
 import simpletodo.composeapp.generated.resources.home_notes_title
@@ -273,6 +274,9 @@ fun HomeScreen(
                                     }
                                     scope.launch { repo.toggleDone(id) }
                                 },
+                                onTogglePinned = { id ->
+                                    scope.launch { repo.togglePinned(id) }
+                                },
                                 onToggleSub = { taskId, subId ->
                                     scope.launch {
                                         repo.toggleSubtask(
@@ -320,6 +324,9 @@ fun HomeScreen(
                                     }
                                     scope.launch { repo.toggleDone(id) }
                                 },
+                                onTogglePinned = { id ->
+                                    scope.launch { repo.togglePinned(id) }
+                                },
                                 onToggleSub = { taskId, subId ->
                                     scope.launch {
                                         repo.toggleSubtask(
@@ -355,6 +362,9 @@ fun HomeScreen(
                                         celebrationTrigger.intValue += 1
                                     }
                                     scope.launch { repo.toggleDone(id) }
+                                },
+                                onTogglePinned = { id ->
+                                    scope.launch { repo.togglePinned(id) }
                                 },
                                 onToggleSub = { taskId, subId ->
                                     scope.launch {
@@ -1531,6 +1541,7 @@ private fun TimelineList(
     emptyStateBody: String?,
     showEmptyMascot: Boolean,
     onToggleDone: (String) -> Unit,
+    onTogglePinned: (String) -> Unit,
     onToggleSub: (String, String) -> Unit,
     onOpenDetails: (TodoTask) -> Unit,
     onEdit: (TodoTask) -> Unit,
@@ -1545,8 +1556,11 @@ private fun TimelineList(
 ) {
     val plannedEarlierLabel = stringResource(Res.string.home_planned_earlier)
     val noDeadlineLabel = stringResource(Res.string.home_no_deadline)
+    val pinnedLabel = stringResource(Res.string.home_pinned_tasks)
+    val pinnedTasks = remember(tasks) { tasks.filter { it.pinned } }
+    val otherTasks = remember(tasks) { tasks.filterNot { it.pinned } }
     val grouped = remember(tasks, plannedEarlierLabel, noDeadlineLabel) {
-        tasks.groupBy { t ->
+        otherTasks.groupBy { t ->
             val now = nowInstant()
             val planned = t.plannedAt
             val deadline = t.deadline
@@ -1590,6 +1604,40 @@ private fun TimelineList(
                     )
                 }
             }
+            if (pinnedTasks.isNotEmpty()) {
+                item {
+                    Text(
+                        text = pinnedLabel,
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(bottom = 8.dp, top = 12.dp)
+                    )
+                }
+                items(pinnedTasks, key = { it.id }) { t ->
+                    Box(Modifier.itemPlacement()) {
+                        AnimatedVisibility(
+                            visible = showCompleted || !t.done,
+                            enter = fadeIn(tween(160)),
+                            exit = shrinkVertically(tween(320)) + fadeOut(tween(260))
+                        ) {
+                            TaskCard(
+                                task = t,
+                                tagLabel = tagName(t.tagId),
+                                noteCount = noteCount(t),
+                                onOpenNotes = { onOpenNotes(t) },
+                                onToggleDone = { onToggleDone(t.id) },
+                                onToggleSub = { subId -> onToggleSub(t.id, subId) },
+                                onOpenDetails = { onOpenDetails(t) },
+                                onEdit = { onEdit(t) },
+                                onTogglePinned = { onTogglePinned(t.id) },
+                                onDelete = { onDelete(t.id) },
+                                onClearCompleted = onClearCompleted,
+                                modifier = Modifier.padding(bottom = 12.dp)
+                            )
+                        }
+                    }
+                }
+            }
 
             groupEntries.forEachIndexed { index, (title, v) ->
                 item {
@@ -1621,6 +1669,7 @@ private fun TimelineList(
                                 onToggleSub = { subId -> onToggleSub(t.id, subId) },
                                 onOpenDetails = { onOpenDetails(t) },
                                 onEdit = { onEdit(t) },
+                                onTogglePinned = { onTogglePinned(t.id) },
                                 onDelete = { onDelete(t.id) },
                                 onClearCompleted = onClearCompleted,
                                 modifier = Modifier.padding(bottom = 12.dp)
@@ -1648,6 +1697,7 @@ private fun FlatList(
     emptyStateBody: String?,
     showEmptyMascot: Boolean,
     onToggleDone: (String) -> Unit,
+    onTogglePinned: (String) -> Unit,
     onToggleSub: (String, String) -> Unit,
     onOpenDetails: (TodoTask) -> Unit,
     onEdit: (TodoTask) -> Unit,
@@ -1660,6 +1710,9 @@ private fun FlatList(
     dimScroll: Boolean,
     onOpenFavorite: (Note) -> Unit
 ) {
+    val pinnedLabel = stringResource(Res.string.home_pinned_tasks)
+    val pinnedTasks = remember(tasks) { tasks.filter { it.pinned } }
+    val otherTasks = remember(tasks) { tasks.filterNot { it.pinned } }
     val listState = rememberLazyListState()
     Box(Modifier.fillMaxWidth()) {
         LazyColumn(
@@ -1685,7 +1738,40 @@ private fun FlatList(
                     )
                 }
             }
-            items(tasks, key = { it.id }) { t ->
+            if (pinnedTasks.isNotEmpty()) {
+                item {
+                    Text(
+                        text = pinnedLabel,
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(bottom = 8.dp, top = 12.dp)
+                    )
+                }
+                items(pinnedTasks, key = { it.id }) { t ->
+                    Box(Modifier.itemPlacement()) {
+                        AnimatedVisibility(
+                            visible = showCompleted || !t.done,
+                            enter = fadeIn(tween(160)),
+                            exit = shrinkVertically(tween(320)) + fadeOut(tween(260))
+                        ) {
+                            TaskCard(
+                                task = t,
+                                tagLabel = tagName(t.tagId),
+                                noteCount = noteCount(t),
+                                onOpenNotes = { onOpenNotes(t) },
+                                onToggleDone = { onToggleDone(t.id) },
+                                onToggleSub = { subId -> onToggleSub(t.id, subId) },
+                                onOpenDetails = { onOpenDetails(t) },
+                                onEdit = { onEdit(t) },
+                                onTogglePinned = { onTogglePinned(t.id) },
+                                onDelete = { onDelete(t.id) },
+                                onClearCompleted = onClearCompleted
+                            )
+                        }
+                    }
+                }
+            }
+            items(otherTasks, key = { it.id }) { t ->
                 Box(Modifier.itemPlacement()) {
                     AnimatedVisibility(
                         visible = showCompleted || !t.done,
@@ -1701,6 +1787,7 @@ private fun FlatList(
                             onToggleSub = { subId -> onToggleSub(t.id, subId) },
                             onOpenDetails = { onOpenDetails(t) },
                             onEdit = { onEdit(t) },
+                            onTogglePinned = { onTogglePinned(t.id) },
                             onDelete = { onDelete(t.id) },
                             onClearCompleted = onClearCompleted
                         )

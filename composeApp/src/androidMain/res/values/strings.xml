@@ -7,4 +7,9 @@
     <string name="widget_tomorrow">Tomorrow</string>
     <string name="widget_overdue">Overdue</string>
     <string name="widget_untitled">(untitled)</string>
+    <string name="pinned_notification_title">Pinned tasks</string>
+    <string name="pinned_notification_more">+%1$d more</string>
+    <string name="widget_pinned_description">Pinned tasks list.</string>
+    <string name="widget_pinned_placeholder">Loading pinned tasks...</string>
+    <string name="widget_pinned_empty">No pinned tasks</string>
 </resources>
